@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Witch's Cauldron: Elemental Alchemy</title>
+    <title>The Witch's Cauldron: Tome of Secrets</title>
     <!-- Modern Premium Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -327,7 +327,7 @@
     <!-- UI Overlay for Instructions and Simulation -->
     <div id="ui-overlay">
         <h1>Witch's Cauldron</h1>
-        <div class="subtitle">Elemental Alchemy WebXR Prototype</div>
+        <div class="subtitle">Tome of Secrets WebXR Prototype</div>
         
         <div class="section-title">VR Controls</div>
         <ul class="controls-list">
@@ -349,6 +349,8 @@
             <button class="action-btn" id="btn-drop-mushroom">🍄 Simulate Fly Amanita Drop (Red)</button>
             <button class="action-btn" id="btn-drop-wing">🦇 Simulate Bat Wing Drop (Grey)</button>
             <button class="action-btn" id="btn-drop-slime">🟢 Simulate Swamp Slime Drop (Green)</button>
+            <button class="action-btn" id="btn-drop-ash">🔥 Simulate Phoenix Ash Drop (Orange)</button>
+            <button class="action-btn" id="btn-drop-root">🪵 Simulate Mandrake Root Drop (Brown)</button>
             <button class="action-btn secondary" id="btn-reset">↺ Reset Scene</button>
             <div id="vr-button-container"></div>
         </div>
@@ -372,6 +374,14 @@
         <div class="hud-row">
             <span class="hud-label">Swamp Slime (Green):</span>
             <span class="hud-value status-badge status-missing" id="status-slime">Missing</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">Phoenix Ash (Orange):</span>
+            <span class="hud-value status-badge status-missing" id="status-ash">Missing</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">Mandrake Root (Brown):</span>
+            <span class="hud-value status-badge status-missing" id="status-root">Missing</span>
         </div>
         <div class="hud-row">
             <span class="hud-label">Pot State:</span>
@@ -398,8 +408,8 @@
         const TABLE_HEIGHT = 0.8;
         const TABLE_WIDTH = 1.4;
         const TABLE_DEPTH = 0.9;
-        const TABLE_POS = new THREE.Vector3(0, 0, -1.0); // directly in front of start
-        const CAULDRON_POS = new THREE.Vector3(0, 0, -1.9); // on the floor, beyond the table
+        const TABLE_POS = new THREE.Vector3(1.3, 0, -1.0); // right side of start
+        const CAULDRON_POS = new THREE.Vector3(0, 0, -1.1); // center, close enough to reach
         const CAULDRON_RADIUS = 0.35;
         const CAULDRON_HEIGHT = 0.7;
 
@@ -418,55 +428,173 @@
 
         // Mesh References
         let floor, table, cauldron, cauldronFluid, fluidMaterial;
-        let toadEgg, flyAmanita, batWing, swampSlime;
+        let toadEgg, flyAmanita, batWing, swampSlime, phoenixAsh, mandrakeRoot;
+        let lectern, tomePlane, tomeCanvas, tomeCtx, tomeTexture;
         let particleSystem; // points emitter for active spell
         let particleData = []; // custom particle kinematics/spiral data
+        let starfieldSystem; // points emitter for Cosmic Starfield state
 
-        // Recipe Manager Class
-        class RecipeManager {
+        // --- 4. Magic Tome Discovery State ---
+        const discoveredPotions = {}; // Stores { "Item A + Item B": { discovered: false/true, potionName: String, ... } }
+        
+        class DiscoveryManager {
             constructor() {
-                this.recipes = [
-                    {
-                        name: "Antigravity State",
-                        ingredients: new Set(["Toad Egg", "Fly Amanita"]),
-                        effect: "ANTIGRAVITY",
-                        color: 0x39ff14, // Green
-                        message: "ANTIGRAVITY ACTIVE"
-                    },
-                    {
-                        name: "Time Dilation",
-                        ingredients: new Set(["Bat Wing", "Swamp Slime"]),
-                        effect: "TIME_DILATION",
-                        color: 0x8a2be2, // Purple
-                        message: "TIME DILATED (0.15x)"
-                    },
-                    {
-                        name: "Shrinking Spell",
-                        ingredients: new Set(["Fly Amanita", "Bat Wing"]),
-                        effect: "SHRINKING",
-                        color: 0x00ffff, // Cyan
-                        message: "SHRUNK TO INSECT SIZE"
-                    },
-                    {
-                        name: "Inferno Vortex",
-                        ingredients: new Set(["Toad Egg", "Swamp Slime"]),
-                        effect: "INFERNO_VORTEX",
-                        color: 0xff4500, // Orange-Red
-                        message: "INFERNO VORTEX ACTIVE"
-                    }
+                this.ingredientsList = [
+                    "Toad Egg",
+                    "Fly Amanita",
+                    "Bat Wing",
+                    "Swamp Slime",
+                    "Phoenix Ash",
+                    "Mandrake Root"
                 ];
+                this.specialRecipes = [
+                    { pair: ["Toad Egg", "Fly Amanita"], name: "Antigravity State", effect: "ANTIGRAVITY", color: 0x39ff14 },
+                    { pair: ["Bat Wing", "Swamp Slime"], name: "Time Dilation State", effect: "TIME_DILATION", color: 0x8a2be2 },
+                    { pair: ["Fly Amanita", "Bat Wing"], name: "Shrinking Spell State", effect: "SHRINKING", color: 0x00ffff },
+                    { pair: ["Toad Egg", "Swamp Slime"], name: "Inferno Vortex State", effect: "INFERNO_VORTEX", color: 0xff4500 },
+                    { pair: ["Phoenix Ash", "Mandrake Root"], name: "Cosmic Starfield State", effect: "COSMIC_STARFIELD", color: 0x000000 },
+                    { pair: ["Mandrake Root", "Bat Wing"], name: "Wireframe Matrix Mode", effect: "WIREFRAME_MATRIX", color: 0x00ff00 }
+                ];
+                this.initDiscoveryState();
+            }
+
+            initDiscoveryState() {
+                // Generate all 15 unique pairs
+                for (let i = 0; i < this.ingredientsList.length; i++) {
+                    for (let j = i + 1; j < this.ingredientsList.length; j++) {
+                        const itemA = this.ingredientsList[i];
+                        const itemB = this.ingredientsList[j];
+                        const key = this.getCombinationKey(itemA, itemB);
+                        
+                        // Check if this pair is a special recipe
+                        const special = this.specialRecipes.find(r => 
+                            r.pair.includes(itemA) && r.pair.includes(itemB)
+                        );
+                        
+                        discoveredPotions[key] = {
+                            itemA: itemA,
+                            itemB: itemB,
+                            discovered: false,
+                            potionName: special ? special.name : "Basic Sludge",
+                            effect: special ? special.effect : "SLUDGE",
+                            color: special ? special.color : 0x8b5a2b
+                        };
+                    }
+                }
+            }
+
+            getCombinationKey(itemA, itemB) {
+                return [itemA, itemB].sort().join(" + ");
             }
 
             evaluateCombination(itemA, itemB) {
-                for (const recipe of this.recipes) {
-                    if (recipe.ingredients.has(itemA) && recipe.ingredients.has(itemB)) {
-                        return recipe;
-                    }
+                const key = this.getCombinationKey(itemA, itemB);
+                if (discoveredPotions[key]) {
+                    discoveredPotions[key].discovered = true;
+                    return discoveredPotions[key];
                 }
                 return null;
             }
         }
-        const recipeManager = new RecipeManager();
+        const discoveryManager = new DiscoveryManager();
+
+        // Magic Tome Drawing Utilities
+        function updateTomeDisplay() {
+            if (!tomeCtx) return;
+            drawTomeOnCanvas(tomeCanvas, tomeCtx, discoveredPotions);
+            if (tomeTexture) tomeTexture.needsUpdate = true;
+        }
+
+        function drawTomeOnCanvas(canvas, ctx, state) {
+            // Background - Parchment
+            ctx.fillStyle = "#f3e6d8";
+            ctx.fillRect(0, 0, 1024, 512);
+
+            // Double page dividers
+            ctx.strokeStyle = "#8b5a2b";
+            ctx.lineWidth = 6;
+            ctx.strokeRect(12, 12, 1000, 488);
+
+            // Center book binding spine shadow
+            ctx.fillStyle = "rgba(100, 70, 40, 0.15)";
+            ctx.fillRect(504, 12, 16, 488);
+            
+            ctx.beginPath();
+            ctx.strokeStyle = "#5a3a1a";
+            ctx.lineWidth = 8;
+            ctx.moveTo(512, 12);
+            ctx.lineTo(512, 500);
+            ctx.stroke();
+
+            // Setup styling
+            ctx.fillStyle = "#2c1c0c";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "top";
+
+            // Title Left Page
+            ctx.font = "bold 26px Georgia, serif";
+            ctx.fillText("Tome of Secrets", 50, 40);
+            ctx.beginPath();
+            ctx.strokeStyle = "rgba(90, 58, 26, 0.4)";
+            ctx.lineWidth = 3;
+            ctx.moveTo(50, 75);
+            ctx.lineTo(462, 75);
+            ctx.stroke();
+
+            // Title Right Page
+            ctx.fillText("Alchemical Ledger", 562, 40);
+            ctx.beginPath();
+            ctx.moveTo(562, 75);
+            ctx.lineTo(974, 75);
+            ctx.stroke();
+
+            ctx.font = "17px Arial, sans-serif";
+            const keys = Object.keys(state);
+            let discoveredCount = 0;
+
+            // Draw left page entries (1-8)
+            let yPos = 95;
+            for (let i = 0; i < 8; i++) {
+                if (i >= keys.length) break;
+                const key = keys[i];
+                const entry = state[key];
+                let text = "";
+                if (entry.discovered) {
+                    text = `${entry.itemA} + ${entry.itemB} = ${entry.potionName}`;
+                    discoveredCount++;
+                    ctx.fillStyle = "#228b22"; // Forest green for discovered
+                } else {
+                    text = "?? + ?? = ???";
+                    ctx.fillStyle = "#7a6e60"; // Muted grey
+                }
+                ctx.fillText(`${i + 1}. ${text}`, 50, yPos);
+                yPos += 42;
+            }
+
+            // Draw right page entries (9-15)
+            yPos = 95;
+            for (let i = 8; i < 15; i++) {
+                if (i >= keys.length) break;
+                const key = keys[i];
+                const entry = state[key];
+                let text = "";
+                if (entry.discovered) {
+                    text = `${entry.itemA} + ${entry.itemB} = ${entry.potionName}`;
+                    discoveredCount++;
+                    ctx.fillStyle = "#228b22";
+                } else {
+                    text = "?? + ?? = ???";
+                    ctx.fillStyle = "#7a6e60";
+                }
+                ctx.fillText(`${i + 1}. ${text}`, 562, yPos);
+                yPos += 42;
+            }
+
+            // Progress tracking
+            ctx.fillStyle = "#5a3a1a";
+            ctx.font = "bold 20px Georgia, serif";
+            ctx.fillText(`Unveiled: ${discoveredCount} / 15 Secrets`, 562, 435);
+        }
 
         // VR Controllers & Interaction
         const controllers = [];
@@ -665,7 +793,7 @@
 
             // Warm hearth/candle lantern hanging above table
             const lanternLight = new THREE.PointLight(0xffaa44, 3, 6);
-            lanternLight.position.set(0, TABLE_HEIGHT + 0.3, -1.0);
+            lanternLight.position.set(1.3, TABLE_HEIGHT + 0.3, -1.0);
             lanternLight.castShadow = true;
             lanternLight.shadow.mapSize.width = 1024;
             lanternLight.shadow.mapSize.height = 1024;
@@ -676,7 +804,7 @@
             const candleGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.1, 8);
             const candleMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.7 });
             const candle = new THREE.Mesh(candleGeo, candleMat);
-            candle.position.set(0, TABLE_HEIGHT + 0.05, -1.0);
+            candle.position.set(1.3, TABLE_HEIGHT + 0.05, -1.0);
             
             const flameGeo = new THREE.ConeGeometry(0.015, 0.05, 8);
             const flameMat = new THREE.MeshBasicMaterial({ color: 0xff8800 });
@@ -684,6 +812,71 @@
             flame.position.y = 0.07;
             candle.add(flame);
             scene.add(candle);
+
+            // F. Lectern and Magic Tome
+            // Wooden Lectern pedestal next to cauldron
+            lectern = new THREE.Group();
+            lectern.name = "Lectern";
+            lectern.position.set(-0.9, 0, -1.0); // stand on the left side
+            lectern.rotation.y = Math.PI / 5; // angle towards player
+            scene.add(lectern);
+
+            const woodMat = new THREE.MeshStandardMaterial({
+                color: 0x5c4033, // dark wood brown
+                roughness: 0.9,
+                metalness: 0.05
+            });
+
+            // Pedestal base
+            const baseGeo = new THREE.BoxGeometry(0.35, 0.05, 0.35);
+            const base = new THREE.Mesh(baseGeo, woodMat);
+            base.position.y = 0.025;
+            base.castShadow = true;
+            lectern.add(base);
+
+            // Stand column
+            const colGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.85, 12);
+            const col = new THREE.Mesh(colGeo, woodMat);
+            col.position.y = 0.45;
+            col.castShadow = true;
+            col.receiveShadow = true;
+            lectern.add(col);
+
+            // Slanted book support plate
+            const shelfGeo = new THREE.BoxGeometry(0.75, 0.03, 0.6);
+            const shelf = new THREE.Mesh(shelfGeo, woodMat);
+            shelf.position.set(0, 1.0, 0); // slightly higher
+            shelf.rotation.x = Math.PI / 6; // Angle it up towards the player's eyes
+            shelf.castShadow = true;
+            shelf.receiveShadow = true;
+            lectern.add(shelf);
+
+            // Magic Tome Open Book UI Plane
+            tomeCanvas = document.createElement('canvas');
+            tomeCanvas.width = 1024;
+            tomeCanvas.height = 512;
+            tomeCtx = tomeCanvas.getContext('2d');
+            
+            // Draw initial book layout
+            updateTomeDisplay();
+
+            tomeTexture = new THREE.CanvasTexture(tomeCanvas);
+            const tomeMat = new THREE.MeshStandardMaterial({
+                map: tomeTexture,
+                roughness: 0.95,
+                metalness: 0.0
+            });
+
+            // Plane geometry representing the open page layout
+            tomePlane = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.56), tomeMat);
+            tomePlane.name = "MagicTome"; // Exclude from Matrix wireframe traverse
+            
+            // Position flat against the slanted stand surface
+            const surfaceOffset = new THREE.Vector3(0, 0.02, 0.005).applyEuler(shelf.rotation);
+            tomePlane.position.copy(shelf.position).add(surfaceOffset);
+            tomePlane.rotation.copy(shelf.rotation);
+            tomePlane.receiveShadow = true;
+            lectern.add(tomePlane);
         }
 
         // --- Spawn Ingredient Meshes with Procedural Details ---
@@ -731,7 +924,7 @@
                 toadEggGroup.add(node);
             }
 
-            toadEggGroup.position.set(-0.45, TABLE_HEIGHT + 0.08, -1.0);
+            toadEggGroup.position.set(0.8, TABLE_HEIGHT + 0.08, -1.0);
             toadEggGroup.userData = {
                 name: "Toad Egg",
                 isGrabbed: false,
@@ -740,7 +933,7 @@
                 radius: 0.08,
                 onTable: true,
                 inPot: false,
-                initialPos: new THREE.Vector3(-0.45, TABLE_HEIGHT + 0.08, -1.0)
+                initialPos: new THREE.Vector3(0.8, TABLE_HEIGHT + 0.08, -1.0)
             };
             scene.add(toadEggGroup);
             ingredients.push(toadEggGroup);
@@ -775,7 +968,7 @@
                 mushroomGroup.add(spot);
             }
 
-            mushroomGroup.position.set(-0.15, TABLE_HEIGHT, -1.0);
+            mushroomGroup.position.set(1.0, TABLE_HEIGHT, -1.0);
             mushroomGroup.userData = {
                 name: "Fly Amanita",
                 isGrabbed: false,
@@ -784,7 +977,7 @@
                 radius: 0.07,
                 onTable: true,
                 inPot: false,
-                initialPos: new THREE.Vector3(-0.15, TABLE_HEIGHT, -1.0)
+                initialPos: new THREE.Vector3(1.0, TABLE_HEIGHT, -1.0)
             };
             scene.add(mushroomGroup);
             ingredients.push(mushroomGroup);
@@ -821,7 +1014,7 @@
             wingMesh.castShadow = true;
             wingGroup.add(wingMesh);
 
-            wingGroup.position.set(0.15, TABLE_HEIGHT, -1.0);
+            wingGroup.position.set(1.2, TABLE_HEIGHT, -1.0);
             wingGroup.userData = {
                 name: "Bat Wing",
                 isGrabbed: false,
@@ -830,7 +1023,7 @@
                 radius: 0.08,
                 onTable: true,
                 inPot: false,
-                initialPos: new THREE.Vector3(0.15, TABLE_HEIGHT, -1.0)
+                initialPos: new THREE.Vector3(1.2, TABLE_HEIGHT, -1.0)
             };
             scene.add(wingGroup);
             ingredients.push(wingGroup);
@@ -864,7 +1057,7 @@
             slimeMesh.castShadow = true;
             slimeGroup.add(slimeMesh);
 
-            slimeGroup.position.set(0.45, TABLE_HEIGHT, -1.0);
+            slimeGroup.position.set(1.4, TABLE_HEIGHT, -1.0);
             slimeGroup.userData = {
                 name: "Swamp Slime",
                 isGrabbed: false,
@@ -873,11 +1066,94 @@
                 radius: 0.07,
                 onTable: true,
                 inPot: false,
-                initialPos: new THREE.Vector3(0.45, TABLE_HEIGHT, -1.0)
+                initialPos: new THREE.Vector3(1.4, TABLE_HEIGHT, -1.0)
             };
             scene.add(slimeGroup);
             ingredients.push(slimeGroup);
             swampSlime = slimeGroup;
+
+            // E. Phoenix Ash: Glowing Orange/Yellow clustered sphere dust-cloud
+            const ashGroup = new THREE.Group();
+            ashGroup.name = "Phoenix Ash";
+
+            const ashMat = new THREE.MeshStandardMaterial({
+                color: 0xffaa00, // Golden Orange
+                roughness: 0.9,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.8,
+                emissive: 0xff4500,
+                emissiveIntensity: 1.5
+            });
+
+            const mainAsh = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 12), ashMat);
+            mainAsh.castShadow = true;
+            ashGroup.add(mainAsh);
+
+            for (let i = 0; i < 4; i++) {
+                const sat = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 8), ashMat);
+                const angle = (i * Math.PI * 2) / 4;
+                sat.position.set(Math.cos(angle) * 0.035, (Math.random() - 0.5) * 0.03, Math.sin(angle) * 0.035);
+                ashGroup.add(sat);
+            }
+
+            ashGroup.position.set(1.6, TABLE_HEIGHT + 0.05, -1.0);
+            ashGroup.userData = {
+                name: "Phoenix Ash",
+                isGrabbed: false,
+                grabbedBy: null,
+                velocity: new THREE.Vector3(0, 0, 0),
+                radius: 0.07,
+                onTable: true,
+                inPot: false,
+                initialPos: new THREE.Vector3(1.6, TABLE_HEIGHT + 0.05, -1.0)
+            };
+            scene.add(ashGroup);
+            ingredients.push(ashGroup);
+            phoenixAsh = ashGroup;
+
+            // F. Mandrake Root: Brown twisted Cylinder root
+            const rootGroup = new THREE.Group();
+            rootGroup.name = "Mandrake Root";
+
+            const rootMat = new THREE.MeshStandardMaterial({
+                color: 0x5c4033, // Matte brown root color
+                roughness: 0.95,
+                metalness: 0.05
+            });
+
+            const baseRoot = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.12, 10), rootMat);
+            baseRoot.position.y = 0.06;
+            baseRoot.rotation.z = 0.2; // slight twist
+            baseRoot.castShadow = true;
+            rootGroup.add(baseRoot);
+
+            const leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.006, 0.08, 8), rootMat);
+            leftLeg.position.set(-0.02, 0.02, 0.01);
+            leftLeg.rotation.z = 0.5;
+            leftLeg.castShadow = true;
+            rootGroup.add(leftLeg);
+
+            const rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.006, 0.08, 8), rootMat);
+            rightLeg.position.set(0.02, 0.02, -0.01);
+            rightLeg.rotation.z = -0.5;
+            rightLeg.castShadow = true;
+            rootGroup.add(rightLeg);
+
+            rootGroup.position.set(1.8, TABLE_HEIGHT, -1.0);
+            rootGroup.userData = {
+                name: "Mandrake Root",
+                isGrabbed: false,
+                grabbedBy: null,
+                velocity: new THREE.Vector3(0, 0, 0),
+                radius: 0.07,
+                onTable: true,
+                inPot: false,
+                initialPos: new THREE.Vector3(1.8, TABLE_HEIGHT, -1.0)
+            };
+            scene.add(rootGroup);
+            ingredients.push(rootGroup);
+            mandrakeRoot = rootGroup;
         }
 
         // --- 1. VR Setup & Controller Initialization ---
@@ -1229,6 +1505,8 @@
             else if (ingredientName === "Fly Amanita") badgeId = "status-mushroom";
             else if (ingredientName === "Bat Wing") badgeId = "status-wing";
             else if (ingredientName === "Swamp Slime") badgeId = "status-slime";
+            else if (ingredientName === "Phoenix Ash") badgeId = "status-ash";
+            else if (ingredientName === "Mandrake Root") badgeId = "status-root";
 
             if (badgeId) {
                 const badge = document.getElementById(badgeId);
@@ -1253,16 +1531,13 @@
             if (uniqueItems.length === 2) {
                 const itemA = uniqueItems[0];
                 const itemB = uniqueItems[1];
-                const recipe = recipeManager.evaluateCombination(itemA, itemB);
+                const recipe = discoveryManager.evaluateCombination(itemA, itemB);
                 if (recipe) {
+                    // Update Book UI immediately to show discovery status
+                    updateTomeDisplay();
+                    
+                    // Activate alchemical spell state
                     activateSpell(recipe);
-                } else {
-                    const cauldronHUD = document.getElementById("status-cauldron");
-                    if (cauldronHUD) {
-                        cauldronHUD.innerText = "Muddled Potion";
-                        cauldronHUD.style.color = "#ff4500";
-                    }
-                    showFlashMessage("No chemical reaction occurred.");
                 }
             } else {
                 const activeCount = ingredientsInPot.length;
@@ -1318,12 +1593,12 @@
 
             const cauldronHUD = document.getElementById("status-cauldron");
             if (cauldronHUD) {
-                cauldronHUD.innerText = recipe.message;
+                cauldronHUD.innerText = recipe.potionName;
                 cauldronHUD.className = "hud-value status-badge status-complete";
                 cauldronHUD.style.color = "#39ff14";
             }
 
-            showFlashMessage(`Spell Unleashed: ${recipe.name}!`);
+            showFlashMessage(`Spell Unleashed: ${recipe.potionName}!`);
 
             // Light & Color transition targets
             cauldron.userData.light.intensity = 25;
@@ -1334,6 +1609,21 @@
                 scene.remove(particleSystem);
                 particleSystem = null;
             }
+
+            // Restore original materials if exiting wireframe matrix mode
+            scene.traverse(child => {
+                if (child.isMesh && child.userData.originalMaterial) {
+                    child.material = child.userData.originalMaterial;
+                    child.userData.originalMaterial = null;
+                }
+            });
+
+            // Restore cosmic starfield defaults if active
+            if (starfieldSystem) {
+                scene.remove(starfieldSystem);
+                starfieldSystem = null;
+            }
+            scene.background = new THREE.Color(0x0e0813);
 
             // Vibration pulse
             triggerHapticFeedback(200, 1.0);
@@ -1354,6 +1644,24 @@
                 targetCameraGroupY = -3.2; // Lower to keep eyes near table
             } else if (recipe.effect === "INFERNO_VORTEX") {
                 createInfernoParticles();
+            } else if (recipe.effect === "COSMIC_STARFIELD") {
+                scene.background = new THREE.Color(0x000000);
+                createStarfieldParticles();
+            } else if (recipe.effect === "WIREFRAME_MATRIX") {
+                scene.traverse(child => {
+                    // Traverse all meshes in the scene, skip Tome plane UI and Controller pointer rays
+                    if (child.isMesh && child.name !== "MagicTome" && child.name !== "laser") {
+                        if (!child.userData.originalMaterial) {
+                            child.userData.originalMaterial = child.material;
+                        }
+                        child.material = new THREE.MeshBasicMaterial({
+                            color: 0x00ff00,
+                            wireframe: true
+                        });
+                    }
+                });
+            } else if (recipe.effect === "SLUDGE") {
+                createSludgeParticles();
             }
         }
 
@@ -1518,6 +1826,144 @@
             particleSystem.geometry.attributes.position.needsUpdate = true;
         }
 
+        function createStarfieldParticles() {
+            const particleCount = 600;
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const speeds = [];
+
+            // Spawn particles in a big zone surrounding the room
+            for (let i = 0; i < particleCount; i++) {
+                positions.push(
+                    (Math.random() - 0.5) * 8.0, // x
+                    Math.random() * 4.0,         // y
+                    (Math.random() - 0.5) * 8.0  // z
+                );
+                speeds.push(0.2 + Math.random() * 0.3); // speed Z
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 16;
+            canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+            grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            grad.addColorStop(0.3, 'rgba(230, 240, 255, 0.8)');
+            grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 16, 16);
+
+            const texture = new THREE.CanvasTexture(canvas);
+
+            const material = new THREE.PointsMaterial({
+                size: 0.05,
+                map: texture,
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+
+            starfieldSystem = new THREE.Points(geometry, material);
+            scene.add(starfieldSystem);
+            starfieldSystem.userData = { speeds: speeds };
+        }
+
+        function updateStarfieldParticles(dt) {
+            if (!starfieldSystem) return;
+
+            const posArr = starfieldSystem.geometry.attributes.position.array;
+            const speeds = starfieldSystem.userData.speeds;
+
+            for (let i = 0; i < posArr.length; i += 3) {
+                // drift stars forward on Z
+                posArr[i + 2] += speeds[i / 3] * dt;
+
+                // Wrap if they go past player
+                if (posArr[i + 2] > 2.5) {
+                    posArr[i + 2] = -5.0; // reset far behind cauldron
+                    posArr[i] = (Math.random() - 0.5) * 8.0;
+                    posArr[i + 1] = Math.random() * 4.0;
+                }
+            }
+
+            starfieldSystem.geometry.attributes.position.needsUpdate = true;
+        }
+
+        function createSludgeParticles() {
+            const particleCount = 80;
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const velocities = [];
+
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * CAULDRON_RADIUS * 0.7;
+                const x = CAULDRON_POS.x + Math.cos(angle) * radius;
+                const y = CAULDRON_POS.y + CAULDRON_HEIGHT - 0.02;
+                const z = CAULDRON_POS.z + Math.sin(angle) * radius;
+
+                positions.push(x, y, z);
+                velocities.push(
+                    (Math.random() - 0.5) * 0.05, // vx
+                    0.1 + Math.random() * 0.2,    // vy
+                    (Math.random() - 0.5) * 0.05  // vz
+                );
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 16;
+            canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+            grad.addColorStop(0, 'rgba(120, 90, 70, 0.6)');
+            grad.addColorStop(0.5, 'rgba(80, 70, 60, 0.3)');
+            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 16, 16);
+
+            const texture = new THREE.CanvasTexture(canvas);
+
+            const material = new THREE.PointsMaterial({
+                size: 0.15,
+                map: texture,
+                transparent: true,
+                depthWrite: false
+            });
+
+            particleSystem = new THREE.Points(geometry, material);
+            scene.add(particleSystem);
+            particleSystem.userData = { velocities: velocities };
+        }
+
+        function updateSludgeParticles(dt) {
+            if (!particleSystem) return;
+
+            const posArr = particleSystem.geometry.attributes.position.array;
+            const vel = particleSystem.userData.velocities;
+
+            for (let i = 0; i < posArr.length; i += 3) {
+                posArr[i] += vel[i] * dt;
+                posArr[i+1] += vel[i+1] * dt;
+                posArr[i+2] += vel[i+2] * dt;
+
+                posArr[i] += Math.sin(performance.now() * 0.003 + i) * 0.001;
+
+                if (posArr[i+1] > CAULDRON_POS.y + CAULDRON_HEIGHT + 1.2) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const radius = Math.random() * CAULDRON_RADIUS * 0.7;
+                    posArr[i] = CAULDRON_POS.x + Math.cos(angle) * radius;
+                    posArr[i+1] = CAULDRON_POS.y + CAULDRON_HEIGHT - 0.02;
+                    posArr[i+2] = CAULDRON_POS.z + Math.sin(angle) * radius;
+                }
+            }
+
+            particleSystem.geometry.attributes.position.needsUpdate = true;
+        }
+
         // --- Custom Physics Simulation Engine ---
         function updatePhysics(dt) {
             // Apply simple custom kinematics to objects not currently grabbed
@@ -1672,6 +2118,17 @@
                     targetColor.setHex(0xff4500);
                     targetEmissive.setHex(0x8b0000);
                     updateInfernoParticles(dt);
+                } else if (activeSpell === "COSMIC_STARFIELD") {
+                    targetColor.setHex(0x000000);
+                    targetEmissive.setHex(0x111111);
+                    updateStarfieldParticles(dt);
+                } else if (activeSpell === "WIREFRAME_MATRIX") {
+                    targetColor.setHex(0x00ff00);
+                    targetEmissive.setHex(0x00aa00);
+                } else if (activeSpell === "SLUDGE") {
+                    targetColor.setHex(0x8b5a2b);
+                    targetEmissive.setHex(0x3c2a1a);
+                    updateSludgeParticles(dt);
                 }
                 
                 fluidMaterial.color.lerpColors(new THREE.Color(0x4a0e80), targetColor, spellProgress);
@@ -1860,6 +2317,30 @@
                 controls.target.copy(CAULDRON_POS);
             });
 
+            // Drop Phoenix Ash
+            document.getElementById('btn-drop-ash').addEventListener('click', () => {
+                if (phoenixAsh.userData.inPot) return;
+
+                // Animate drop directly from above cauldron
+                phoenixAsh.position.set(CAULDRON_POS.x, CAULDRON_POS.y + CAULDRON_HEIGHT + 0.6, CAULDRON_POS.z);
+                phoenixAsh.userData.velocity.set(0, -2, 0);
+                phoenixAsh.userData.isGrabbed = false;
+                phoenixAsh.userData.onTable = false;
+                controls.target.copy(CAULDRON_POS);
+            });
+
+            // Drop Mandrake Root
+            document.getElementById('btn-drop-root').addEventListener('click', () => {
+                if (mandrakeRoot.userData.inPot) return;
+
+                // Animate drop directly from above cauldron
+                mandrakeRoot.position.set(CAULDRON_POS.x, CAULDRON_POS.y + CAULDRON_HEIGHT + 0.6, CAULDRON_POS.z);
+                mandrakeRoot.userData.velocity.set(0, -2, 0);
+                mandrakeRoot.userData.isGrabbed = false;
+                mandrakeRoot.userData.onTable = false;
+                controls.target.copy(CAULDRON_POS);
+            });
+
             // Reset simulation states
             document.getElementById('btn-reset').addEventListener('click', resetSimulation);
         }
@@ -1872,7 +2353,7 @@
             targetCameraGroupY = 0;
             ingredientsInPot.length = 0;
 
-            // Reset all 4 ingredients
+            // Reset all 6 ingredients
             ingredients.forEach(item => {
                 item.visible = true;
                 item.scale.set(1, 1, 1);
@@ -1883,18 +2364,35 @@
                 item.rotation.set(0, 0, 0);
             });
 
-            // Clean particles
+            // Restore original materials if meshes are in wireframe mode
+            scene.traverse(child => {
+                if (child.isMesh && child.userData.originalMaterial) {
+                    child.material = child.userData.originalMaterial;
+                    child.userData.originalMaterial = null;
+                }
+            });
+
+            // Clean up existing alchemical particles
             if (particleSystem) {
                 scene.remove(particleSystem);
                 particleSystem = null;
             }
+
+            // Clean up cosmic space particles
+            if (starfieldSystem) {
+                scene.remove(starfieldSystem);
+                starfieldSystem = null;
+            }
+            scene.background = new THREE.Color(0x0e0813);
 
             // Restore HUD values
             const badges = [
                 { id: "status-toad", label: "Missing" },
                 { id: "status-mushroom", label: "Missing" },
                 { id: "status-wing", label: "Missing" },
-                { id: "status-slime", label: "Missing" }
+                { id: "status-slime", label: "Missing" },
+                { id: "status-ash", label: "Missing" },
+                { id: "status-root", label: "Missing" }
             ];
             badges.forEach(b => {
                 const el = document.getElementById(b.id);
