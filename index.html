@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Witch's Cauldron: Antigravity</title>
+    <title>The Witch's Cauldron: Elemental Alchemy</title>
     <!-- Modern Premium Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -327,7 +327,7 @@
     <!-- UI Overlay for Instructions and Simulation -->
     <div id="ui-overlay">
         <h1>Witch's Cauldron</h1>
-        <div class="subtitle">Antigravity WebXR Prototype</div>
+        <div class="subtitle">Elemental Alchemy WebXR Prototype</div>
         
         <div class="section-title">VR Controls</div>
         <ul class="controls-list">
@@ -345,8 +345,10 @@
 
         <div class="section-title">Direct Simulation Commands</div>
         <div class="btn-container">
-            <button class="action-btn" id="btn-drop-toad">🧪 Simulate Toad Egg Drop</button>
-            <button class="action-btn" id="btn-drop-mushroom">🍄 Simulate Fly Amanita Drop</button>
+            <button class="action-btn" id="btn-drop-toad">🧪 Simulate Toad Egg Drop (Blue)</button>
+            <button class="action-btn" id="btn-drop-mushroom">🍄 Simulate Fly Amanita Drop (Red)</button>
+            <button class="action-btn" id="btn-drop-wing">🦇 Simulate Bat Wing Drop (Grey)</button>
+            <button class="action-btn" id="btn-drop-slime">🟢 Simulate Swamp Slime Drop (Green)</button>
             <button class="action-btn secondary" id="btn-reset">↺ Reset Scene</button>
             <div id="vr-button-container"></div>
         </div>
@@ -356,12 +358,20 @@
     <div id="hud">
         <div class="section-title" style="margin-bottom: 12px; border-bottom: 1px solid rgba(138, 43, 226, 0.2); padding-bottom: 6px;">Alchemy Ledger</div>
         <div class="hud-row">
-            <span class="hud-label">Toad Egg:</span>
+            <span class="hud-label">Toad Egg (Blue):</span>
             <span class="hud-value status-badge status-missing" id="status-toad">Missing</span>
         </div>
         <div class="hud-row">
-            <span class="hud-label">Fly Amanita:</span>
+            <span class="hud-label">Fly Amanita (Red):</span>
             <span class="hud-value status-badge status-missing" id="status-mushroom">Missing</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">Bat Wing (Grey):</span>
+            <span class="hud-value status-badge status-missing" id="status-wing">Missing</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">Swamp Slime (Green):</span>
+            <span class="hud-value status-badge status-missing" id="status-slime">Missing</span>
         </div>
         <div class="hud-row">
             <span class="hud-label">Pot State:</span>
@@ -396,14 +406,67 @@
         // Interactive Objects & State
         const ingredients = [];
         const ingredientsInPot = [];
-        let isAntigravityActive = false;
         const gravity = -9.8;
-        let antigravityProgress = 0; // for animating transitions
+
+        // Spell/Alchemical States
+        let activeSpell = null;
+        let gravityActive = true;
+        let timeScale = 1.0;
+        let targetCameraGroupScale = new THREE.Vector3(1, 1, 1);
+        let targetCameraGroupY = 0;
+        let spellProgress = 0; // for animating cauldron color transitions
 
         // Mesh References
         let floor, table, cauldron, cauldronFluid, fluidMaterial;
-        let toadEgg, flyAmanita;
-        let particleSystem; // points emitter for showstopper
+        let toadEgg, flyAmanita, batWing, swampSlime;
+        let particleSystem; // points emitter for active spell
+        let particleData = []; // custom particle kinematics/spiral data
+
+        // Recipe Manager Class
+        class RecipeManager {
+            constructor() {
+                this.recipes = [
+                    {
+                        name: "Antigravity State",
+                        ingredients: new Set(["Toad Egg", "Fly Amanita"]),
+                        effect: "ANTIGRAVITY",
+                        color: 0x39ff14, // Green
+                        message: "ANTIGRAVITY ACTIVE"
+                    },
+                    {
+                        name: "Time Dilation",
+                        ingredients: new Set(["Bat Wing", "Swamp Slime"]),
+                        effect: "TIME_DILATION",
+                        color: 0x8a2be2, // Purple
+                        message: "TIME DILATED (0.15x)"
+                    },
+                    {
+                        name: "Shrinking Spell",
+                        ingredients: new Set(["Fly Amanita", "Bat Wing"]),
+                        effect: "SHRINKING",
+                        color: 0x00ffff, // Cyan
+                        message: "SHRUNK TO INSECT SIZE"
+                    },
+                    {
+                        name: "Inferno Vortex",
+                        ingredients: new Set(["Toad Egg", "Swamp Slime"]),
+                        effect: "INFERNO_VORTEX",
+                        color: 0xff4500, // Orange-Red
+                        message: "INFERNO VORTEX ACTIVE"
+                    }
+                ];
+            }
+
+            evaluateCombination(itemA, itemB) {
+                for (const recipe of this.recipes) {
+                    if (recipe.ingredients.has(itemA) && recipe.ingredients.has(itemB)) {
+                        return recipe;
+                    }
+                }
+                return null;
+            }
+        }
+        const recipeManager = new RecipeManager();
 
         // VR Controllers & Interaction
         const controllers = [];
@@ -625,16 +688,16 @@
 
         // --- Spawn Ingredient Meshes with Procedural Details ---
         function spawnIngredients() {
-            // A. Toad Egg: Purple glowing bumpy organic sphere
+            // A. Toad Egg: Blue bumpy organic sphere
             const toadEggGroup = new THREE.Group();
             toadEggGroup.name = "Toad Egg";
             
             const eggBaseGeo = new THREE.SphereGeometry(0.08, 16, 16);
             const eggMat = new THREE.MeshStandardMaterial({
-                color: 0x6a0dad, // Royal purple
+                color: 0x0066ff, // Mystical Blue
                 roughness: 0.15,
-                metalness: 0.1,
-                emissive: 0x3c096c,
+                metalness: 0.2,
+                emissive: 0x002288,
                 emissiveIntensity: 0.8
             });
             const eggBase = new THREE.Mesh(eggBaseGeo, eggMat);
@@ -643,8 +706,10 @@
 
             // Add small bumpy nodes of varying size
             const nodeMat = new THREE.MeshStandardMaterial({
-                color: 0x9d4edd, // Lighter magenta
-                roughness: 0.2
+                color: 0x00d2ff, // Glowing cyan/light-blue
+                roughness: 0.2,
+                emissive: 0x0055aa,
+                emissiveIntensity: 0.5
             });
             for (let i = 0; i < 12; i++) {
                 const nodeSize = 0.01 + Math.random() * 0.015;
@@ -656,7 +721,7 @@
                 const v = Math.random();
                 const theta = u * 2.0 * Math.PI;
                 const phi = Math.acos(2.0 * v - 1.0);
-                const r = 0.075; // slightly offset from center
+                const r = 0.075;
                 
                 node.position.set(
                     r * Math.sin(phi) * Math.cos(theta),
@@ -666,8 +731,7 @@
                 toadEggGroup.add(node);
             }
 
-            // Physics states setup inside userData
-            toadEggGroup.position.set(-0.35, TABLE_HEIGHT + 0.1, -1.0);
+            toadEggGroup.position.set(-0.45, TABLE_HEIGHT + 0.08, -1.0);
             toadEggGroup.userData = {
                 name: "Toad Egg",
                 isGrabbed: false,
@@ -676,74 +740,144 @@
                 radius: 0.08,
                 onTable: true,
                 inPot: false,
-                initialPos: new THREE.Vector3(-0.35, TABLE_HEIGHT + 0.1, -1.0)
+                initialPos: new THREE.Vector3(-0.45, TABLE_HEIGHT + 0.08, -1.0)
             };
             scene.add(toadEggGroup);
             ingredients.push(toadEggGroup);
             toadEgg = toadEggGroup;
 
-            // B. Fly Amanita: Mushroom with red cap and white spots
+            // B. Fly Amanita: Red Cylinder
             const mushroomGroup = new THREE.Group();
             mushroomGroup.name = "Fly Amanita";
 
-            // Mushroom stem (stalk)
-            const stalkGeo = new THREE.CylinderGeometry(0.02, 0.03, 0.14, 12);
-            const stalkMat = new THREE.MeshStandardMaterial({
-                color: 0xeee6d8,
-                roughness: 0.9
-            });
-            const stalk = new THREE.Mesh(stalkGeo, stalkMat);
-            stalk.position.y = 0.07;
-            stalk.castShadow = true;
-            mushroomGroup.add(stalk);
-
-            // Mushroom cap
-            const capGeo = new THREE.SphereGeometry(0.09, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
-            const capMat = new THREE.MeshStandardMaterial({
-                color: 0xd90429, // Deep crimson red
-                roughness: 0.3,
-                emissive: 0x800000,
+            // Stylized Red Cylinder body
+            const cylinderGeo = new THREE.CylinderGeometry(0.04, 0.05, 0.14, 16);
+            const cylinderMat = new THREE.MeshStandardMaterial({
+                color: 0xd90429, // Crimson Red
+                roughness: 0.4,
+                metalness: 0.1,
+                emissive: 0x550011,
                 emissiveIntensity: 0.3
             });
-            const cap = new THREE.Mesh(capGeo, capMat);
-            cap.position.y = 0.13;
-            cap.castShadow = true;
-            mushroomGroup.add(cap);
+            const mainBody = new THREE.Mesh(cylinderGeo, cylinderMat);
+            mainBody.position.y = 0.07;
+            mainBody.castShadow = true;
+            mushroomGroup.add(mainBody);
 
-            // Add spot spheres on red cap surface
+            // Add decorative white spots directly on the cylinder to keep the fly amanita identity
             const spotMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
-            const spotPositions = [
-                new THREE.Vector3(0.03, 0.19, 0.05),
-                new THREE.Vector3(-0.04, 0.18, 0.06),
-                new THREE.Vector3(0.06, 0.17, -0.04),
-                new THREE.Vector3(-0.05, 0.18, -0.05),
-                new THREE.Vector3(0.0, 0.22, 0.0),
-                new THREE.Vector3(0.07, 0.15, 0.05),
-                new THREE.Vector3(-0.06, 0.15, -0.04)
-            ];
-
-            spotPositions.forEach(pos => {
-                const spotGeo = new THREE.SphereGeometry(0.012, 6, 6);
+            for (let i = 0; i < 8; i++) {
+                const spotGeo = new THREE.SphereGeometry(0.01, 8, 8);
                 const spot = new THREE.Mesh(spotGeo, spotMat);
-                spot.position.copy(pos);
+                const angle = (i * Math.PI * 2) / 8;
+                const h = 0.02 + Math.random() * 0.1;
+                spot.position.set(Math.cos(angle) * 0.045, h, Math.sin(angle) * 0.045);
                 mushroomGroup.add(spot);
-            });
+            }
 
-            // Physics states setup inside userData
-            mushroomGroup.position.set(0.35, TABLE_HEIGHT + 0.01, -1.0);
+            mushroomGroup.position.set(-0.15, TABLE_HEIGHT, -1.0);
             mushroomGroup.userData = {
                 name: "Fly Amanita",
                 isGrabbed: false,
                 grabbedBy: null,
                 velocity: new THREE.Vector3(0, 0, 0),
-                radius: 0.1,
+                radius: 0.07,
                 onTable: true,
                 inPot: false,
-                initialPos: new THREE.Vector3(0.35, TABLE_HEIGHT + 0.01, -1.0)
+                initialPos: new THREE.Vector3(-0.15, TABLE_HEIGHT, -1.0)
             };
             scene.add(mushroomGroup);
             ingredients.push(mushroomGroup);
             flyAmanita = mushroomGroup;
+
+            // C. Bat Wing: Dark Grey ExtrudeGeometry / Wing Shape
+            const wingGroup = new THREE.Group();
+            wingGroup.name = "Bat Wing";
+
+            const wingShape = new THREE.Shape();
+            wingShape.moveTo(0, 0);
+            wingShape.quadraticCurveTo(0.04, 0.08, 0.1, 0.06);
+            wingShape.quadraticCurveTo(0.06, 0.01, 0.09, -0.04);
+            wingShape.quadraticCurveTo(0.03, -0.02, 0, 0);
+
+            const extrudeSettings = {
+                depth: 0.015,
+                bevelEnabled: true,
+                bevelSegments: 2,
+                steps: 1,
+                bevelSize: 0.003,
+                bevelThickness: 0.003
+            };
+            const wingGeo = new THREE.ExtrudeGeometry(wingShape, extrudeSettings);
+            wingGeo.center();
+
+            const wingMat = new THREE.MeshStandardMaterial({
+                color: 0x2b2b2b, // Dark grey
+                roughness: 0.7,
+                metalness: 0.3
+            });
+            const wingMesh = new THREE.Mesh(wingGeo, wingMat);
+            wingMesh.position.y = 0.05;
+            wingMesh.castShadow = true;
+            wingGroup.add(wingMesh);
+
+            wingGroup.position.set(0.15, TABLE_HEIGHT, -1.0);
+            wingGroup.userData = {
+                name: "Bat Wing",
+                isGrabbed: false,
+                grabbedBy: null,
+                velocity: new THREE.Vector3(0, 0, 0),
+                radius: 0.08,
+                onTable: true,
+                inPot: false,
+                initialPos: new THREE.Vector3(0.15, TABLE_HEIGHT, -1.0)
+            };
+            scene.add(wingGroup);
+            ingredients.push(wingGroup);
+            batWing = wingGroup;
+
+            // D. Swamp Slime: Neon Green Deformed Icosahedron
+            const slimeGroup = new THREE.Group();
+            slimeGroup.name = "Swamp Slime";
+
+            const slimeGeo = new THREE.IcosahedronGeometry(0.07, 1);
+            const posAttr = slimeGeo.attributes.position;
+            const vertex = new THREE.Vector3();
+            for (let i = 0; i < posAttr.count; i++) {
+                vertex.fromBufferAttribute(posAttr, i);
+                vertex.addScaledVector(vertex.clone().normalize(), (Math.random() - 0.5) * 0.02);
+                posAttr.setXYZ(i, vertex.x, vertex.y, vertex.z);
+            }
+            slimeGeo.computeVertexNormals();
+
+            const slimeMat = new THREE.MeshStandardMaterial({
+                color: 0x39ff14, // Neon Green
+                roughness: 0.1,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.85,
+                emissive: 0x145f08,
+                emissiveIntensity: 0.4
+            });
+            const slimeMesh = new THREE.Mesh(slimeGeo, slimeMat);
+            slimeMesh.position.y = 0.07;
+            slimeMesh.castShadow = true;
+            slimeGroup.add(slimeMesh);
+
+            slimeGroup.position.set(0.45, TABLE_HEIGHT, -1.0);
+            slimeGroup.userData = {
+                name: "Swamp Slime",
+                isGrabbed: false,
+                grabbedBy: null,
+                velocity: new THREE.Vector3(0, 0, 0),
+                radius: 0.07,
+                onTable: true,
+                inPot: false,
+                initialPos: new THREE.Vector3(0.45, TABLE_HEIGHT, -1.0)
+            };
+            scene.add(slimeGroup);
+            ingredients.push(slimeGroup);
+            swampSlime = slimeGroup;
         }
 
         // --- 1. VR Setup & Controller Initialization ---
@@ -1043,7 +1177,6 @@
             const cameraOffset = new THREE.Vector3();
             cameraOffset.subVectors(cameraWorldPos, cameraGroup.position);
             cameraOffset.y = 0;
-
             // Offset group position to place headset center on landing ring
             cameraGroup.position.copy(targetVector).sub(cameraOffset);
             
@@ -1079,53 +1212,66 @@
         }
 
         function addIngredientToPot(ingredientName) {
-            // Track the ingredients inside an array
+            if (ingredientsInPot.includes(ingredientName)) return; // safety
             ingredientsInPot.push(ingredientName);
             
             // Find reference mesh
-            const item = ingredientName === "Toad Egg" ? toadEgg : flyAmanita;
-            item.userData.inPot = true;
-            item.userData.velocity.set(0, 0, 0);
-
-            // Animate object falling / dissolving into pot fluid
-            new THREE.Texture(); // placeholder load dummy
-            fadeOutIngredientIntoLiquid(item);
+            const item = ingredients.find(i => i.userData.name === ingredientName);
+            if (item) {
+                item.userData.inPot = true;
+                item.userData.velocity.set(0, 0, 0);
+                fadeOutIngredientIntoLiquid(item);
+            }
 
             // Update UI/HUD badges
-            if (ingredientName === "Toad Egg") {
-                const badge = document.getElementById("status-toad");
-                badge.innerText = "Added";
-                badge.className = "hud-value status-badge status-added";
-            } else if (ingredientName === "Fly Amanita") {
-                const badge = document.getElementById("status-mushroom");
-                badge.innerText = "Added";
-                badge.className = "hud-value status-badge status-added";
+            let badgeId = "";
+            if (ingredientName === "Toad Egg") badgeId = "status-toad";
+            else if (ingredientName === "Fly Amanita") badgeId = "status-mushroom";
+            else if (ingredientName === "Bat Wing") badgeId = "status-wing";
+            else if (ingredientName === "Swamp Slime") badgeId = "status-slime";
+
+            if (badgeId) {
+                const badge = document.getElementById(badgeId);
+                if (badge) {
+                    badge.innerText = "Added";
+                    badge.className = "hud-value status-badge status-added";
+                }
             }
 
             showFlashMessage(`${ingredientName} added to the pot!`);
 
-            // Splash visual effect: flash cauldron light, ripple fluid emissive
+            // Splash visual effect: flash cauldron light, purple splash
             cauldron.userData.light.intensity = 20.0;
-            cauldron.userData.light.color.setHex(0x9d4edd); // Purple flash
+            cauldron.userData.light.color.setHex(0x9d4edd);
 
             // Validate recipe combinations
             checkRecipe();
         }
 
         function checkRecipe() {
-            // Validates if the combination matches "Toad Egg" + "Fly Amanita"
-            const hasToad = ingredientsInPot.includes("Toad Egg");
-            const hasMushroom = ingredientsInPot.includes("Fly Amanita");
-
-            if (hasToad && hasMushroom && !isAntigravityActive) {
-                // Success: Start the Antigravity Showstopper event
-                triggerAntigravityEffect();
+            const uniqueItems = Array.from(new Set(ingredientsInPot));
+            if (uniqueItems.length === 2) {
+                const itemA = uniqueItems[0];
+                const itemB = uniqueItems[1];
+                const recipe = recipeManager.evaluateCombination(itemA, itemB);
+                if (recipe) {
+                    activateSpell(recipe);
+                } else {
+                    const cauldronHUD = document.getElementById("status-cauldron");
+                    if (cauldronHUD) {
+                        cauldronHUD.innerText = "Muddled Potion";
+                        cauldronHUD.style.color = "#ff4500";
+                    }
+                    showFlashMessage("No chemical reaction occurred.");
+                }
             } else {
-                // Still waiting on ingredients update cauldron HUD label
                 const activeCount = ingredientsInPot.length;
                 const cauldronHUD = document.getElementById("status-cauldron");
-                cauldronHUD.innerText = `${activeCount} / 2 Ingredients`;
-                cauldronHUD.style.color = "#d8bfd8";
+                if (cauldronHUD) {
+                    cauldronHUD.innerText = `${activeCount} / 2 Ingredients`;
+                    cauldronHUD.style.color = "#d8bfd8";
+                    cauldronHUD.className = "hud-value";
+                }
             }
         }
 
@@ -1154,26 +1300,61 @@
             shrinkLoop();
         }
 
-        // --- 5. The "Antigravity Potion" Showstopper Function ---
+        // --- 5. Elemental Alchemy Spells & Haptics Loop ---
 
-        function triggerAntigravityEffect() {
-            isAntigravityActive = true;
-            antigravityProgress = 0;
+        function triggerHapticFeedback(duration = 150, intensity = 1.0) {
+            const session = renderer.xr.getSession();
+            if (!session) return;
+            for (const source of session.inputSources) {
+                if (source.gamepad && source.gamepad.hapticActuators && source.gamepad.hapticActuators.length > 0) {
+                    source.gamepad.hapticActuators[0].pulse(intensity, duration);
+                }
+            }
+        }
 
-            // a) UI HUD Update
+        function activateSpell(recipe) {
+            activeSpell = recipe.effect;
+            spellProgress = 0;
+
             const cauldronHUD = document.getElementById("status-cauldron");
-            cauldronHUD.innerText = "ANTIGRAVITY ACTIVE";
-            cauldronHUD.className = "hud-value status-badge status-complete";
-            cauldronHUD.style.color = "#39ff14";
+            if (cauldronHUD) {
+                cauldronHUD.innerText = recipe.message;
+                cauldronHUD.className = "hud-value status-badge status-complete";
+                cauldronHUD.style.color = "#39ff14";
+            }
 
-            showFlashMessage("Antigravity potion complete! Watch the room float!");
+            showFlashMessage(`Spell Unleashed: ${recipe.name}!`);
 
-            // b) Trigger a simple particle system (THREE.Points) rising up from the cauldron
-            createAntigravityParticles();
-
-            // Trigger visual transitions on lights
+            // Light & Color transition targets
             cauldron.userData.light.intensity = 25;
-            cauldron.userData.light.color.setHex(0x39ff14); // Electric Neon Green
+            cauldron.userData.light.color.setHex(recipe.color);
+
+            // Clean up existing particle systems
+            if (particleSystem) {
+                scene.remove(particleSystem);
+                particleSystem = null;
+            }
+
+            // Vibration pulse
+            triggerHapticFeedback(200, 1.0);
+
+            // Re-apply alchemical states (clear defaults first)
+            gravityActive = true;
+            timeScale = 1.0;
+            targetCameraGroupScale.set(1, 1, 1);
+            targetCameraGroupY = 0.0;
+
+            if (recipe.effect === "ANTIGRAVITY") {
+                gravityActive = false;
+                createAntigravityParticles();
+            } else if (recipe.effect === "TIME_DILATION") {
+                timeScale = 0.15;
+            } else if (recipe.effect === "SHRINKING") {
+                targetCameraGroupScale.set(3, 3, 3);
+                targetCameraGroupY = -3.2; // Lower to keep eyes near table
+            } else if (recipe.effect === "INFERNO_VORTEX") {
+                createInfernoParticles();
+            }
         }
 
         function createAntigravityParticles() {
@@ -1182,7 +1363,6 @@
             const positions = [];
             const velocities = [];
 
-            // Spawn particles inside cauldron radius
             for (let i = 0; i < particleCount; i++) {
                 const angle = Math.random() * Math.PI * 2;
                 const radius = Math.random() * (CAULDRON_RADIUS * 0.8);
@@ -1192,7 +1372,6 @@
 
                 positions.push(x, y, z);
                 
-                // Velocity variables (rise up, slight wobble drift)
                 velocities.push(
                     (Math.random() - 0.5) * 0.15, // vx
                     0.3 + Math.random() * 0.4,    // vy
@@ -1202,7 +1381,6 @@
 
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
             
-            // Build circular soft glow particle texture using HTML Canvas
             const canvas = document.createElement('canvas');
             canvas.width = 16;
             canvas.height = 16;
@@ -1236,21 +1414,104 @@
             const vel = particleSystem.userData.velocities;
             
             for (let i = 0; i < posArr.length; i += 3) {
-                // Update particle positions based on velocity
-                posArr[i] += vel[i] * dt;     // x
-                posArr[i+1] += vel[i+1] * dt; // y (rise)
-                posArr[i+2] += vel[i+2] * dt; // z
+                posArr[i] += vel[i] * dt;
+                posArr[i+1] += vel[i+1] * dt;
+                posArr[i+2] += vel[i+2] * dt;
 
-                // Add random air wobble
                 posArr[i] += Math.sin(performance.now() * 0.005 + i) * 0.002;
 
-                // Reset particle to cauldron fluid top if it floats too high (above cabin height)
                 if (posArr[i+1] > 3.0) {
                     const angle = Math.random() * Math.PI * 2;
                     const radius = Math.random() * (CAULDRON_RADIUS * 0.8);
                     posArr[i] = CAULDRON_POS.x + Math.cos(angle) * radius;
                     posArr[i+1] = CAULDRON_POS.y + CAULDRON_HEIGHT - 0.02;
                     posArr[i+2] = CAULDRON_POS.z + Math.sin(angle) * radius;
+                }
+            }
+
+            particleSystem.geometry.attributes.position.needsUpdate = true;
+        }
+
+        function createInfernoParticles() {
+            const particleCount = 300;
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            
+            particleData = [];
+
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * CAULDRON_RADIUS * 0.7;
+                const y = CAULDRON_POS.y + CAULDRON_HEIGHT - 0.02;
+
+                positions.push(
+                    CAULDRON_POS.x + Math.sin(angle) * radius,
+                    y,
+                    CAULDRON_POS.z + Math.cos(angle) * radius
+                );
+
+                particleData.push({
+                    angle: angle,
+                    radius: radius,
+                    y: y,
+                    speedY: 0.6 + Math.random() * 0.8,
+                    speedAngle: 3.0 + Math.random() * 4.0,
+                    initialRadius: radius
+                });
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 16;
+            canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+            grad.addColorStop(0, 'rgba(255, 230, 150, 1)');
+            grad.addColorStop(0.3, 'rgba(255, 69, 0, 0.8)');
+            grad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 16, 16);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+
+            const material = new THREE.PointsMaterial({
+                size: 0.12,
+                map: texture,
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+
+            particleSystem = new THREE.Points(geometry, material);
+            scene.add(particleSystem);
+        }
+
+        function updateInfernoParticles(dt) {
+            if (!particleSystem) return;
+
+            const posArr = particleSystem.geometry.attributes.position.array;
+
+            for (let i = 0; i < particleData.length; i++) {
+                const data = particleData[i];
+
+                data.angle += data.speedAngle * dt;
+                data.y += data.speedY * dt;
+
+                const progress = (data.y - (CAULDRON_POS.y + CAULDRON_HEIGHT)) / 2.0;
+                const currentRadius = data.initialRadius * (1.0 + progress * 1.5);
+
+                const x = CAULDRON_POS.x + Math.sin(data.angle) * currentRadius;
+                const z = CAULDRON_POS.z + Math.cos(data.angle) * currentRadius;
+
+                posArr[i*3] = x;
+                posArr[i*3+1] = data.y;
+                posArr[i*3+2] = z;
+
+                if (data.y > CAULDRON_POS.y + CAULDRON_HEIGHT + 2.0) {
+                    data.y = CAULDRON_POS.y + CAULDRON_HEIGHT - 0.02;
+                    data.angle = Math.random() * Math.PI * 2;
+                    data.initialRadius = Math.random() * CAULDRON_RADIUS * 0.7;
                 }
             }
 
@@ -1271,7 +1532,7 @@
                 const pos = item.position;
                 const vel = item.userData.velocity;
 
-                if (!isAntigravityActive) {
+                if (gravityActive) {
                     // --- Normal Gravity Physics ---
                     // Apply downward gravity acceleration
                     vel.y += gravity * dt;
@@ -1338,24 +1599,24 @@
 
                 } else {
                     // --- Showstopper Antigravity Physics Mode ---
-                    // CRITICAL requirement: Lose gravity simulation and drift slowly upward translation vector
-                    // Slowly decelerate initial velocities to complete weightlessness drift
+                    // Decelerate initial velocities to complete weightlessness drift
                     vel.multiplyScalar(0.95);
                     pos.addScaledVector(vel, dt);
 
-                    // Continuous slow upward drifting translation vector
-                    pos.y += 0.01 * 60 * dt; // exactly 1cm per normal frame tick
+                    // Progressive upward float translation with the requested formula
+                    pos.y += 0.003 * timeScale;
+                    pos.y += Math.sin(Date.now() * 0.002) * 0.005 * timeScale;
 
                     // Gentle circular floating rotation wobble for premium magic visual feel
                     const floatWobbleTime = performance.now() * 0.001;
-                    pos.x += Math.sin(floatWobbleTime + item.id) * 0.0015;
-                    pos.z += Math.cos(floatWobbleTime + item.id) * 0.0015;
+                    pos.x += Math.sin(floatWobbleTime + item.id) * 0.0015 * timeScale;
+                    pos.z += Math.cos(floatWobbleTime + item.id) * 0.0015 * timeScale;
                     
-                    item.rotation.x += 0.002;
-                    item.rotation.y += 0.004;
+                    item.rotation.x += 0.002 * timeScale;
+                    item.rotation.y += 0.004 * timeScale;
 
-                    // If items float above room ceiling (3.2m), wrap them back to the table level to maintain loop interaction
-                    if (pos.y > 3.2) {
+                    // If items float above room ceiling (3.2m), wrap them back to the table level
+                    if (pos.y > 3.2 || pos.y < 0.1) {
                         pos.y = TABLE_HEIGHT + 0.1;
                         pos.x = item.userData.initialPos.x + (Math.random() - 0.5) * 0.2;
                         pos.z = item.userData.initialPos.z + (Math.random() - 0.5) * 0.2;
@@ -1368,10 +1629,12 @@
 
         // --- Render Loop (WebXR Compatible) ---
         function animate(timestamp, frame) {
-            const dt = Math.min(clock.getDelta(), 0.1); // clamp dt to avoid physics explode spikes
+            const realDt = Math.min(clock.getDelta(), 0.1);
+            const dt = realDt * timeScale; // Time dilated delta time
 
             // 1. Process VR Controller tracking positions
             if (renderer.xr.isPresenting) {
+                // Must use real time for tracking controllers to avoid sluggish lag
                 controllerTrackers.forEach(updateControllerVelocityTracker);
 
                 // Handle teleport arcs visualization when squeeze is active
@@ -1382,41 +1645,59 @@
                 });
             }
 
-            // 2. Perform Custom Physics kinematics
+            // 2. Perform Custom Physics kinematics (with time-dilation)
             updatePhysics(dt);
 
             // 3. Perform Cauldron Collision verification
             checkCauldronCollision();
 
-            // 4. Update Antigravity Potion Visual Showstopper States
-            if (isAntigravityActive) {
-                // Interpolate cauldron fluid color towards glowing neon green
-                antigravityProgress = Math.min(antigravityProgress + dt * 0.8, 1.0);
+            // 4. Update Cauldron Fluid and Active Spell States
+            if (activeSpell) {
+                spellProgress = Math.min(spellProgress + realDt * 0.8, 1.0);
                 
-                // Color transition to glowing green
-                fluidMaterial.color.lerpColors(new THREE.Color(0x4a0e80), new THREE.Color(0x39ff14), antigravityProgress);
-                fluidMaterial.emissive.lerpColors(new THREE.Color(0x240046), new THREE.Color(0x19a008), antigravityProgress);
+                let targetColor = new THREE.Color(0x4a0e80);
+                let targetEmissive = new THREE.Color(0x240046);
+                
+                if (activeSpell === "ANTIGRAVITY") {
+                    targetColor.setHex(0x39ff14);
+                    targetEmissive.setHex(0x19a008);
+                    updateAntigravityParticles(dt);
+                } else if (activeSpell === "TIME_DILATION") {
+                    targetColor.setHex(0x8a2be2);
+                    targetEmissive.setHex(0x3c096c);
+                } else if (activeSpell === "SHRINKING") {
+                    targetColor.setHex(0x00ffff);
+                    targetEmissive.setHex(0x005577);
+                } else if (activeSpell === "INFERNO_VORTEX") {
+                    targetColor.setHex(0xff4500);
+                    targetEmissive.setHex(0x8b0000);
+                    updateInfernoParticles(dt);
+                }
+                
+                fluidMaterial.color.lerpColors(new THREE.Color(0x4a0e80), targetColor, spellProgress);
+                fluidMaterial.emissive.lerpColors(new THREE.Color(0x240046), targetEmissive, spellProgress);
                 
                 // Pulsing light intensity animation
                 cauldron.userData.light.intensity = 15.0 + Math.sin(performance.now() * 0.008) * 5.0;
 
                 // Animate floating bubbling cauldron liquid plane slightly
                 cauldronFluid.position.y = (CAULDRON_HEIGHT - 0.05) + Math.sin(performance.now() * 0.003) * 0.008;
-
-                // Rise mystical green particle system points
-                updateAntigravityParticles(dt);
             } else {
                 // Idle purple cauldron fluid animation
                 cauldronFluid.position.y = (CAULDRON_HEIGHT - 0.05) + Math.sin(performance.now() * 0.002) * 0.005;
                 cauldron.userData.light.intensity = 8.0 + Math.sin(performance.now() * 0.004) * 2.0;
             }
 
-            // 5. Orbit Controls Update for Desktop viewport fallback
+            // 5. Smoothly interpolate cameraGroup scale and Y height (for Shrinking Spell)
+            cameraGroup.scale.lerp(targetCameraGroupScale, 5 * realDt);
+            cameraGroup.position.y = THREE.MathUtils.lerp(cameraGroup.position.y, targetCameraGroupY, 5 * realDt);
+
+            // 6. Orbit Controls Update for Desktop viewport fallback
             if (!renderer.xr.isPresenting) {
                 controls.update();
             }
 
-            // 6. Output to display screen
+            // 7. Output to display screen
             renderer.render(scene, camera);
         }
 
@@ -1555,31 +1836,52 @@
                 controls.target.copy(CAULDRON_POS);
             });
 
+            // Drop Bat Wing
+            document.getElementById('btn-drop-wing').addEventListener('click', () => {
+                if (batWing.userData.inPot) return;
+
+                // Animate drop directly from above cauldron
+                batWing.position.set(CAULDRON_POS.x, CAULDRON_POS.y + CAULDRON_HEIGHT + 0.6, CAULDRON_POS.z);
+                batWing.userData.velocity.set(0, -2, 0);
+                batWing.userData.isGrabbed = false;
+                batWing.userData.onTable = false;
+                controls.target.copy(CAULDRON_POS);
+            });
+
+            // Drop Swamp Slime
+            document.getElementById('btn-drop-slime').addEventListener('click', () => {
+                if (swampSlime.userData.inPot) return;
+
+                // Animate drop directly from above cauldron
+                swampSlime.position.set(CAULDRON_POS.x, CAULDRON_POS.y + CAULDRON_HEIGHT + 0.6, CAULDRON_POS.z);
+                swampSlime.userData.velocity.set(0, -2, 0);
+                swampSlime.userData.isGrabbed = false;
+                swampSlime.userData.onTable = false;
+                controls.target.copy(CAULDRON_POS);
+            });
+
             // Reset simulation states
             document.getElementById('btn-reset').addEventListener('click', resetSimulation);
         }
 
         function resetSimulation() {
-            isAntigravityActive = false;
+            activeSpell = null;
+            gravityActive = true;
+            timeScale = 1.0;
+            targetCameraGroupScale.set(1, 1, 1);
+            targetCameraGroupY = 0;
             ingredientsInPot.length = 0;
 
-            // Reset Toad Egg
-            toadEgg.visible = true;
-            toadEgg.scale.set(1, 1, 1);
-            toadEgg.position.copy(toadEgg.userData.initialPos);
-            toadEgg.userData.velocity.set(0,0,0);
-            toadEgg.userData.inPot = false;
-            toadEgg.userData.onTable = true;
-            toadEgg.rotation.set(0,0,0);
-
-            // Reset Fly Amanita
-            flyAmanita.visible = true;
-            flyAmanita.scale.set(1, 1, 1);
-            flyAmanita.position.copy(flyAmanita.userData.initialPos);
-            flyAmanita.userData.velocity.set(0,0,0);
-            flyAmanita.userData.inPot = false;
-            flyAmanita.userData.onTable = true;
-            flyAmanita.rotation.set(0,0,0);
+            // Reset all 4 ingredients
+            ingredients.forEach(item => {
+                item.visible = true;
+                item.scale.set(1, 1, 1);
+                item.position.copy(item.userData.initialPos);
+                item.userData.velocity.set(0, 0, 0);
+                item.userData.inPot = false;
+                item.userData.onTable = true;
+                item.rotation.set(0, 0, 0);
+            });
 
             // Clean particles
             if (particleSystem) {
@@ -1588,23 +1890,33 @@
             }
 
             // Restore HUD values
-            document.getElementById("status-toad").innerText = "Missing";
-            document.getElementById("status-toad").className = "hud-value status-badge status-missing";
-            
-            document.getElementById("status-mushroom").innerText = "Missing";
-            document.getElementById("status-mushroom").className = "hud-value status-badge status-missing";
+            const badges = [
+                { id: "status-toad", label: "Missing" },
+                { id: "status-mushroom", label: "Missing" },
+                { id: "status-wing", label: "Missing" },
+                { id: "status-slime", label: "Missing" }
+            ];
+            badges.forEach(b => {
+                const el = document.getElementById(b.id);
+                if (el) {
+                    el.innerText = b.label;
+                    el.className = "hud-value status-badge status-missing";
+                }
+            });
 
             const cauldronHUD = document.getElementById("status-cauldron");
-            cauldronHUD.innerText = "Inactive";
-            cauldronHUD.className = "hud-value";
-            cauldronHUD.style.color = "#ff6347";
+            if (cauldronHUD) {
+                cauldronHUD.innerText = "Inactive";
+                cauldronHUD.className = "hud-value";
+                cauldronHUD.style.color = "#ff6347";
+            }
 
             // Restore fluid color
             fluidMaterial.color.setHex(0x4a0e80);
             fluidMaterial.emissive.setHex(0x240046);
             cauldron.userData.light.color.setHex(0x7b2cbf);
 
-            showFlashMessage("Witch's room reset successfully.");
+            showFlashMessage("Witch's Cauldron reset successfully.");
             controls.target.set(0, 0.8, -1.2);
         }
 
