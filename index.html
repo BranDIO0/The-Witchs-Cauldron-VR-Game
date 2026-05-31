@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Witch's Cauldron: Antigravity</title>
+    <!-- Modern Premium Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-glow: #39ff14;
+            --secondary-glow: #8a2be2;
+            --dark-bg: #09060c;
+            --panel-bg: rgba(18, 12, 24, 0.7);
+            --border-glow: rgba(138, 43, 226, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: #f0eae1;
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Premium Glassmorphic Landing UI Overlay */
+        #ui-overlay {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            z-index: 10;
+            width: 380px;
+            padding: 25px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glow);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8), 
+                        inset 0 0 15px rgba(138, 43, 226, 0.2);
+            transition: all 0.5s ease;
+        }
+
+        h1 {
+            font-family: 'Cinzel Decorative', serif;
+            font-size: 1.5rem;
+            line-height: 1.3;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #e0b0ff, #8a2be2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(138, 43, 226, 0.3);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: #bfa3d4;
+            margin-bottom: 20px;
+            line-height: 1.4;
+            border-bottom: 1px solid rgba(138, 43, 226, 0.2);
+            padding-bottom: 12px;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #e0b0ff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .controls-list {
+            list-style: none;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+        }
+
+        .controls-list li {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: flex-start;
+            line-height: 1.4;
+        }
+
+        .controls-list li::before {
+            content: "✦";
+            color: var(--secondary-glow);
+            margin-right: 8px;
+        }
+
+        .key-badge {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            padding: 1px 5px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #fff;
+            margin: 0 2px;
+        }
+
+        /* Call-to-action buttons for testing and WebXR initialization */
+        .btn-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(138, 43, 226, 0.6), rgba(75, 0, 130, 0.8));
+            border: 1px solid rgba(186, 85, 211, 0.4);
+            border-radius: 8px;
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .action-btn:hover {
+            background: linear-gradient(135deg, rgba(138, 43, 226, 0.8), rgba(75, 0, 130, 1));
+            border-color: rgba(186, 85, 211, 0.7);
+            box-shadow: 0 0 15px rgba(138, 43, 226, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .action-btn:active {
+            transform: translateY(1px);
+        }
+
+        .action-btn.secondary {
+            background: rgba(30, 20, 45, 0.8);
+            border: 1px solid rgba(138, 43, 226, 0.3);
+            color: #bfa3d4;
+        }
+
+        .action-btn.secondary:hover {
+            background: rgba(45, 30, 65, 0.9);
+            color: #fff;
+            border-color: rgba(138, 43, 226, 0.6);
+        }
+
+        /* VR Button container placement */
+        #vr-button-container {
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        /* Custom VR Button styling injected by Three.js override */
+        #VRButton {
+            position: static !important;
+            width: 100% !important;
+            height: 48px !important;
+            padding: 12px !important;
+            background: linear-gradient(135deg, #7b1fa2, #4a148c) !important;
+            border: 1px solid #9c27b0 !important;
+            border-radius: 8px !important;
+            color: #ffffff !important;
+            font-family: 'Outfit', sans-serif !important;
+            font-size: 0.9rem !important;
+            font-weight: 600 !important;
+            opacity: 1 !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            box-shadow: 0 0 20px rgba(138, 43, 226, 0.5) !important;
+        }
+
+        #VRButton:hover {
+            background: linear-gradient(135deg, #9c27b0, #6a1b9a) !important;
+            box-shadow: 0 0 25px rgba(156, 39, 176, 0.8) !important;
+            transform: scale(1.02);
+        }
+
+        /* Recipe Status HUD overlay */
+        #hud {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            z-index: 10;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 15px 25px;
+            backdrop-filter: blur(10px);
+            min-width: 250px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+
+        .hud-row:last-child {
+            margin-bottom: 0;
+            border-top: 1px solid rgba(138, 43, 226, 0.2);
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+
+        .hud-label {
+            color: #bfa3d4;
+        }
+
+        .hud-value {
+            font-weight: 600;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-missing {
+            background: rgba(255, 69, 0, 0.2);
+            color: #ff6347;
+            border: 1px solid rgba(255, 69, 0, 0.3);
+        }
+
+        .status-added {
+            background: rgba(138, 43, 226, 0.2);
+            color: #d8bfd8;
+            border: 1px solid rgba(138, 43, 226, 0.4);
+        }
+
+        .status-complete {
+            background: rgba(57, 255, 20, 0.2);
+            color: var(--primary-glow);
+            border: 1px solid rgba(57, 255, 20, 0.4);
+            text-shadow: 0 0 5px rgba(57, 255, 20, 0.5);
+            animation: pulse-glow 1.5s infinite alternate;
+        }
+
+        /* Tiny helper prompt at the top center of the screen */
+        #hud-message {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            background: rgba(9, 6, 12, 0.85);
+            border: 1px solid rgba(138, 43, 226, 0.6);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: #ffffff;
+            font-weight: 400;
+            pointer-events: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            transition: opacity 0.5s ease;
+            opacity: 0;
+            text-align: center;
+        }
+
+        @keyframes pulse-glow {
+            from { box-shadow: 0 0 5px rgba(57, 255, 20, 0.2); }
+            to { box-shadow: 0 0 15px rgba(57, 255, 20, 0.6); }
+        }
+
+        /* Responsive UI Adjustments */
+        @media (max-height: 600px) {
+            #ui-overlay {
+                top: 15px;
+                left: 15px;
+                width: 320px;
+                padding: 15px;
+            }
+            .controls-list, .subtitle {
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+
+    <!-- Importmap definition for module loading -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay for Instructions and Simulation -->
+    <div id="ui-overlay">
+        <h1>Witch's Cauldron</h1>
+        <div class="subtitle">Antigravity WebXR Prototype</div>
+        
+        <div class="section-title">VR Controls</div>
+        <ul class="controls-list">
+            <li><strong>Grab & Throw:</strong> Aim laser, hold <span class="key-badge">Trigger</span>, and throw/release.</li>
+            <li><strong>Teleport:</strong> Press & hold <span class="key-badge">Squeeze</span>, aim arc, and release.</li>
+        </ul>
+
+        <div class="section-title">Desktop Testing Fallback</div>
+        <ul class="controls-list">
+            <li><strong>Look:</strong> Click & drag the background.</li>
+            <li><strong>Move Camera:</strong> Use <span class="key-badge">W</span> <span class="key-badge">A</span> <span class="key-badge">S</span> <span class="key-badge">D</span>.</li>
+            <li><strong>Grab Ingredients:</strong> Hold <span class="key-badge">Left Click</span> on an item and drag.</li>
+            <li><strong>Throw Ingredients:</strong> Flick mouse quickly and release <span class="key-badge">Left Click</span>.</li>
+        </ul>
+
+        <div class="section-title">Direct Simulation Commands</div>
+        <div class="btn-container">
+            <button class="action-btn" id="btn-drop-toad">🧪 Simulate Toad Egg Drop</button>
+            <button class="action-btn" id="btn-drop-mushroom">🍄 Simulate Fly Amanita Drop</button>
+            <button class="action-btn secondary" id="btn-reset">↺ Reset Scene</button>
+            <div id="vr-button-container"></div>
+        </div>
+    </div>
+
+    <!-- Potion mixing status tracker HUD -->
+    <div id="hud">
+        <div class="section-title" style="margin-bottom: 12px; border-bottom: 1px solid rgba(138, 43, 226, 0.2); padding-bottom: 6px;">Alchemy Ledger</div>
+        <div class="hud-row">
+            <span class="hud-label">Toad Egg:</span>
+            <span class="hud-value status-badge status-missing" id="status-toad">Missing</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">Fly Amanita:</span>
+            <span class="hud-value status-badge status-missing" id="status-mushroom">Missing</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">Pot State:</span>
+            <span class="hud-value" id="status-cauldron" style="color: #ff6347; font-weight: bold;">Inactive</span>
+        </div>
+    </div>
+
+    <!-- Small popup announcement banner -->
+    <div id="hud-message">A magic energy fills the air...</div>
+
+    <!-- Core Application Logic -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { VRButton } from 'three/addons/webxr/VRButton.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Core Application States ---
+        let scene, camera, renderer, cameraGroup;
+        let controls; // OrbitControls for desktop testing
+        const clock = new THREE.Clock();
+
+        // Environment configuration
+        const FLOOR_LEVEL = 0;
+        const TABLE_HEIGHT = 0.8;
+        const TABLE_WIDTH = 1.4;
+        const TABLE_DEPTH = 0.9;
+        const TABLE_POS = new THREE.Vector3(0, 0, -1.0); // directly in front of start
+        const CAULDRON_POS = new THREE.Vector3(0, 0, -1.9); // on the floor, beyond the table
+        const CAULDRON_RADIUS = 0.35;
+        const CAULDRON_HEIGHT = 0.7;
+
+        // Interactive Objects & State
+        const ingredients = [];
+        const ingredientsInPot = [];
+        let isAntigravityActive = false;
+        const gravity = -9.8;
+        let antigravityProgress = 0; // for animating transitions
+
+        // Mesh References
+        let floor, table, cauldron, cauldronFluid, fluidMaterial;
+        let toadEgg, flyAmanita;
+        let particleSystem; // points emitter for showstopper
+
+        // VR Controllers & Interaction
+        const controllers = [];
+        const controllerTrackers = []; // tracks velocity
+        const teleportArcs = []; // curved line helpers
+        const teleportMarkers = []; // target rings on floor
+        let activeTeleportController = null; // tracking which hand is pointing teleport arc
+
+        // Desktop interaction state (Mouse drag physics)
+        let raycasterDesktop = new THREE.Raycaster();
+        let mousePosition = new THREE.Vector2();
+        let desktopGrabbedObject = null;
+        let desktopGrabDepth = 0;
+        const desktopPositionHistory = [];
+        let isOrbitingEnabled = true;
+
+        // Sound simulation / visual feedback trigger
+        const msgBanner = document.getElementById('hud-message');
+
+        // --- Initializer ---
+        init();
+
+        function init() {
+            // 1. Scene setup with cinematic mystical dark purple/green fog
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0e0813);
+            scene.fog = new THREE.FogExp2(0x0e0813, 0.07);
+
+            // 2. Camera Group Setup (Crucial for VR Teleportation offsets)
+            cameraGroup = new THREE.Group();
+            scene.add(cameraGroup);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, 1.6, 0.8); // standard eye height (1.6m) offset slightly backward
+            cameraGroup.add(camera);
+
+            // 3. WebGL Renderer with High-End Lighting Settings
+            const container = document.getElementById('canvas-container');
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.1;
+            renderer.xr.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // 4. VR Entry Button Setup
+            const vrButtonContainer = document.getElementById('vr-button-container');
+            const vrBtn = VRButton.createButton(renderer);
+            vrButtonContainer.appendChild(vrBtn);
+
+            // 5. Desktop Orbit Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.target.set(0, 0.8, -1.2); // look at the table/cauldron area
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.02; // prevent clipping through floor
+            controls.minDistance = 0.5;
+            controls.maxDistance = 5.0;
+
+            // 6. Build the Witch's Hut Environment
+            buildEnvironment();
+
+            // 7. Initialize Interactive Ingredients
+            spawnIngredients();
+
+            // 8. VR Controllers & Interaction listeners
+            initVRControllers();
+            initGrabInteraction();
+
+            // 9. Attach Event Listeners
+            window.addEventListener('resize', onWindowResize);
+            initDesktopInteractions();
+            initSimulatorButtons();
+
+            // 10. Start the main animation frame loop (WebXR compatible)
+            renderer.setAnimationLoop(animate);
+        }
+
+        // --- Environment Mesh Generation ---
+        function buildEnvironment() {
+            // A. Rustic Floor Plane with canvas-generated procedural wood pattern
+            const floorGeo = new THREE.PlaneGeometry(30, 30);
+            const woodTexture = createProceduralWoodTexture();
+            const floorMat = new THREE.MeshStandardMaterial({ 
+                map: woodTexture,
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = FLOOR_LEVEL;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // B. Rustic Wooden Table
+            const tableGeo = new THREE.BoxGeometry(TABLE_WIDTH, TABLE_HEIGHT, TABLE_DEPTH);
+            const tableTexture = createProceduralTableTexture();
+            const tableMat = new THREE.MeshStandardMaterial({
+                map: tableTexture,
+                roughness: 0.8,
+                metalness: 0.1
+            });
+            table = new THREE.Mesh(tableGeo, tableMat);
+            table.position.copy(TABLE_POS).setY(TABLE_HEIGHT / 2);
+            table.castShadow = true;
+            table.receiveShadow = true;
+            scene.add(table);
+
+            // C. Cast Iron (Gusseisen) Cauldron
+            cauldron = new THREE.Group();
+            cauldron.position.copy(CAULDRON_POS);
+            scene.add(cauldron);
+
+            // Cauldron main belly
+            const cauldronMat = new THREE.MeshStandardMaterial({
+                color: 0x1d1a20,
+                roughness: 0.8,
+                metalness: 0.85,
+                name: "CastIron"
+            });
+            
+            const bellyGeo = new THREE.CylinderGeometry(CAULDRON_RADIUS * 0.9, CAULDRON_RADIUS, CAULDRON_HEIGHT, 24, 8);
+            const belly = new THREE.Mesh(bellyGeo, cauldronMat);
+            belly.position.y = CAULDRON_HEIGHT / 2;
+            belly.castShadow = true;
+            belly.receiveShadow = true;
+            cauldron.add(belly);
+
+            // Top decorative outer rim
+            const rimGeo = new THREE.TorusGeometry(CAULDRON_RADIUS * 0.92, 0.04, 12, 32);
+            const rim = new THREE.Mesh(rimGeo, cauldronMat);
+            rim.rotation.x = Math.PI / 2;
+            rim.position.y = CAULDRON_HEIGHT;
+            rim.castShadow = true;
+            cauldron.add(rim);
+
+            // Three cauldron feet
+            for (let i = 0; i < 3; i++) {
+                const angle = (i * Math.PI * 2) / 3;
+                const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.04, 0.15, 8), cauldronMat);
+                foot.position.set(
+                    Math.cos(angle) * (CAULDRON_RADIUS * 0.8),
+                    0.05,
+                    Math.sin(angle) * (CAULDRON_RADIUS * 0.8)
+                );
+                foot.rotation.z = -Math.cos(angle) * 0.25;
+                foot.rotation.x = Math.sin(angle) * 0.25;
+                foot.castShadow = true;
+                cauldron.add(foot);
+            }
+
+            // Side handles (toruses)
+            for (let i = 0; i < 2; i++) {
+                const angle = i * Math.PI;
+                const handle = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.015, 8, 16), cauldronMat);
+                handle.position.set(
+                    Math.cos(angle) * (CAULDRON_RADIUS * 0.92),
+                    CAULDRON_HEIGHT * 0.7,
+                    Math.sin(angle) * (CAULDRON_RADIUS * 0.92)
+                );
+                handle.rotation.y = angle;
+                handle.rotation.z = 0.5;
+                handle.castShadow = true;
+                cauldron.add(handle);
+            }
+
+            // D. Cauldron Liquid surface
+            const fluidGeo = new THREE.CylinderGeometry(CAULDRON_RADIUS * 0.85, CAULDRON_RADIUS * 0.85, 0.02, 24);
+            fluidMaterial = new THREE.MeshStandardMaterial({
+                color: 0x4a0e80, // mystical deep indigo base
+                roughness: 0.1,
+                metalness: 0.1,
+                emissive: 0x240046, // self-glow
+                emissiveIntensity: 1.0,
+                transparent: true,
+                opacity: 0.95
+            });
+            cauldronFluid = new THREE.Mesh(fluidGeo, fluidMaterial);
+            // place inside the cauldron rim
+            cauldronFluid.position.set(0, CAULDRON_HEIGHT - 0.05, 0);
+            cauldron.add(cauldronFluid);
+
+            // E. Mystical Lighting Layout
+            // Dim ambient light to set the night-time cabin environment
+            const ambientLight = new THREE.AmbientLight(0x0f0b1a, 1.2);
+            scene.add(ambientLight);
+
+            // Cauldron Light: projecting mystical upward glow
+            const cauldronLight = new THREE.PointLight(0x7b2cbf, 8, 4);
+            cauldronLight.position.set(0, CAULDRON_HEIGHT + 0.1, 0);
+            cauldron.add(cauldronLight);
+            cauldron.userData.light = cauldronLight; // reference to animate color/intensity
+
+            // Warm hearth/candle lantern hanging above table
+            const lanternLight = new THREE.PointLight(0xffaa44, 3, 6);
+            lanternLight.position.set(0, TABLE_HEIGHT + 0.3, -1.0);
+            lanternLight.castShadow = true;
+            lanternLight.shadow.mapSize.width = 1024;
+            lanternLight.shadow.mapSize.height = 1024;
+            lanternLight.shadow.bias = -0.002;
+            scene.add(lanternLight);
+
+            // Cozy flame/candle visual mesh for warm light source
+            const candleGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.1, 8);
+            const candleMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.7 });
+            const candle = new THREE.Mesh(candleGeo, candleMat);
+            candle.position.set(0, TABLE_HEIGHT + 0.05, -1.0);
+            
+            const flameGeo = new THREE.ConeGeometry(0.015, 0.05, 8);
+            const flameMat = new THREE.MeshBasicMaterial({ color: 0xff8800 });
+            const flame = new THREE.Mesh(flameGeo, flameMat);
+            flame.position.y = 0.07;
+            candle.add(flame);
+            scene.add(candle);
+        }
+
+        // --- Spawn Ingredient Meshes with Procedural Details ---
+        function spawnIngredients() {
+            // A. Toad Egg: Purple glowing bumpy organic sphere
+            const toadEggGroup = new THREE.Group();
+            toadEggGroup.name = "Toad Egg";
+            
+            const eggBaseGeo = new THREE.SphereGeometry(0.08, 16, 16);
+            const eggMat = new THREE.MeshStandardMaterial({
+                color: 0x6a0dad, // Royal purple
+                roughness: 0.15,
+                metalness: 0.1,
+                emissive: 0x3c096c,
+                emissiveIntensity: 0.8
+            });
+            const eggBase = new THREE.Mesh(eggBaseGeo, eggMat);
+            eggBase.castShadow = true;
+            toadEggGroup.add(eggBase);
+
+            // Add small bumpy nodes of varying size
+            const nodeMat = new THREE.MeshStandardMaterial({
+                color: 0x9d4edd, // Lighter magenta
+                roughness: 0.2
+            });
+            for (let i = 0; i < 12; i++) {
+                const nodeSize = 0.01 + Math.random() * 0.015;
+                const nodeGeo = new THREE.SphereGeometry(nodeSize, 8, 8);
+                const node = new THREE.Mesh(nodeGeo, nodeMat);
+                
+                // Distribute nodes randomly on sphere shell
+                const u = Math.random();
+                const v = Math.random();
+                const theta = u * 2.0 * Math.PI;
+                const phi = Math.acos(2.0 * v - 1.0);
+                const r = 0.075; // slightly offset from center
+                
+                node.position.set(
+                    r * Math.sin(phi) * Math.cos(theta),
+                    r * Math.sin(phi) * Math.sin(theta),
+                    r * Math.cos(phi)
+                );
+                toadEggGroup.add(node);
+            }
+
+            // Physics states setup inside userData
+            toadEggGroup.position.set(-0.35, TABLE_HEIGHT + 0.1, -1.0);
+            toadEggGroup.userData = {
+                name: "Toad Egg",
+                isGrabbed: false,
+                grabbedBy: null,
+                velocity: new THREE.Vector3(0, 0, 0),
+                radius: 0.08,
+                onTable: true,
+                inPot: false,
+                initialPos: new THREE.Vector3(-0.35, TABLE_HEIGHT + 0.1, -1.0)
+            };
+            scene.add(toadEggGroup);
+            ingredients.push(toadEggGroup);
+            toadEgg = toadEggGroup;
+
+            // B. Fly Amanita: Mushroom with red cap and white spots
+            const mushroomGroup = new THREE.Group();
+            mushroomGroup.name = "Fly Amanita";
+
+            // Mushroom stem (stalk)
+            const stalkGeo = new THREE.CylinderGeometry(0.02, 0.03, 0.14, 12);
+            const stalkMat = new THREE.MeshStandardMaterial({
+                color: 0xeee6d8,
+                roughness: 0.9
+            });
+            const stalk = new THREE.Mesh(stalkGeo, stalkMat);
+            stalk.position.y = 0.07;
+            stalk.castShadow = true;
+            mushroomGroup.add(stalk);
+
+            // Mushroom cap
+            const capGeo = new THREE.SphereGeometry(0.09, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+            const capMat = new THREE.MeshStandardMaterial({
+                color: 0xd90429, // Deep crimson red
+                roughness: 0.3,
+                emissive: 0x800000,
+                emissiveIntensity: 0.3
+            });
+            const cap = new THREE.Mesh(capGeo, capMat);
+            cap.position.y = 0.13;
+            cap.castShadow = true;
+            mushroomGroup.add(cap);
+
+            // Add spot spheres on red cap surface
+            const spotMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
+            const spotPositions = [
+                new THREE.Vector3(0.03, 0.19, 0.05),
+                new THREE.Vector3(-0.04, 0.18, 0.06),
+                new THREE.Vector3(0.06, 0.17, -0.04),
+                new THREE.Vector3(-0.05, 0.18, -0.05),
+                new THREE.Vector3(0.0, 0.22, 0.0),
+                new THREE.Vector3(0.07, 0.15, 0.05),
+                new THREE.Vector3(-0.06, 0.15, -0.04)
+            ];
+
+            spotPositions.forEach(pos => {
+                const spotGeo = new THREE.SphereGeometry(0.012, 6, 6);
+                const spot = new THREE.Mesh(spotGeo, spotMat);
+                spot.position.copy(pos);
+                mushroomGroup.add(spot);
+            });
+
+            // Physics states setup inside userData
+            mushroomGroup.position.set(0.35, TABLE_HEIGHT + 0.01, -1.0);
+            mushroomGroup.userData = {
+                name: "Fly Amanita",
+                isGrabbed: false,
+                grabbedBy: null,
+                velocity: new THREE.Vector3(0, 0, 0),
+                radius: 0.1,
+                onTable: true,
+                inPot: false,
+                initialPos: new THREE.Vector3(0.35, TABLE_HEIGHT + 0.01, -1.0)
+            };
+            scene.add(mushroomGroup);
+            ingredients.push(mushroomGroup);
+            flyAmanita = mushroomGroup;
+        }
+
+        // --- 1. VR Setup & Controller Initialization ---
+        function initVRControllers() {
+            // Setup two WebXR Controllers for laser interaction
+            for (let i = 0; i < 2; i++) {
+                const controller = renderer.xr.getController(i);
+                
+                // Add event listeners for grab actions (Trigger button mappings)
+                controller.addEventListener('selectstart', onSelectStart);
+                controller.addEventListener('selectend', onSelectEnd);
+
+                // Add event listeners for teleport actions (Squeeze button mappings)
+                controller.addEventListener('squeezestart', onSqueezeStart);
+                controller.addEventListener('squeezeend', onSqueezeEnd);
+
+                cameraGroup.add(controller);
+                controllers.push(controller);
+
+                // Add a simple laser pointer visual ray
+                const pointerGeo = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(0, 0, 0),
+                    new THREE.Vector3(0, 0, -1) // extends 1m straight ahead
+                ]);
+                const pointerMat = new THREE.LineBasicMaterial({
+                    color: 0x8a2be2,
+                    transparent: true,
+                    opacity: 0.5
+                });
+                const pointer = new THREE.Line(pointerGeo, pointerMat);
+                pointer.name = "laser";
+                pointer.scale.z = 5.0; // scale to 5 meters range visualizer
+                controller.add(pointer);
+
+                // Create a controller velocity tracker instance
+                const tracker = {
+                    controller: controller,
+                    history: [] // stores { position: Vector3, time: number }
+                };
+                controllerTrackers.push(tracker);
+
+                // Create teleport visualizer line and target marker ring for this controller
+                const arcGeo = new THREE.BufferGeometry();
+                const arcMat = new THREE.LineBasicMaterial({ color: 0x39ff14, linewidth: 2 });
+                const arcLine = new THREE.Line(arcGeo, arcMat);
+                arcLine.visible = false;
+                scene.add(arcLine);
+                teleportArcs.push(arcLine);
+
+                const ringGeo = new THREE.RingGeometry(0.25, 0.3, 32);
+                ringGeo.rotateX(-Math.PI / 2); // align flat on the floor
+                const ringMat = new THREE.MeshBasicMaterial({ color: 0x39ff14, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+                const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+                ringMesh.visible = false;
+                scene.add(ringMesh);
+                teleportMarkers.push(ringMesh);
+            }
+        }
+
+        // --- 2. Interaction 1: Grab and Throw Functionality ("Physical Alchemy") ---
+        
+        function initGrabInteraction() {
+            // Function handles registration of controller events.
+            // Setup is complete within initVRControllers() which handles bindings.
+            console.log("Grab and Throw Interaction Initialized.");
+        }
+
+        function checkGrabSelection(controller) {
+            // Use a short-range THREE.Raycaster projecting from the controller to detect ingredient meshes.
+            const tempMatrix = new THREE.Matrix4();
+            tempMatrix.identity().extractRotation(controller.matrixWorld);
+            
+            const raycaster = new THREE.Raycaster();
+            // Origin is the controller position
+            raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+            // Direction is forward vector of controller (-Z in local coordinates)
+            raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix).normalize();
+            // Restrict ray to a short grab range (80cm)
+            raycaster.far = 0.8;
+
+            // Target the interactive ingredient meshes
+            const intersects = raycaster.intersectObjects(ingredients, true);
+            if (intersects.length > 0) {
+                // Find top-level ingredient group (which stores physics details)
+                let selected = intersects[0].object;
+                while (selected.parent && !selected.userData.name) {
+                    selected = selected.parent;
+                }
+                return selected;
+            }
+            return null;
+        }
+
+        function grabObject(controller, object) {
+            // Ensure object isn't already held by this or another controller
+            if (object.userData.isGrabbed) {
+                const prevController = object.userData.grabbedBy;
+                if (prevController) {
+                    releaseObject(prevController, object, false); // force quiet release
+                }
+            }
+
+            object.userData.isGrabbed = true;
+            object.userData.grabbedBy = controller;
+            object.userData.velocity.set(0, 0, 0); // clear velocities
+
+            // Detach object from current hierarchy (scene/table) and attach to controller, preserving spatial transform
+            controller.attach(object);
+
+            // Change laser pointer color to purple visual confirmation
+            const laser = controller.getObjectByName("laser");
+            if (laser) laser.material.color.setHex(0xff00ff);
+        }
+
+        function releaseObject(controller, object, applyVelocity = true) {
+            // Detach it from the controller, re-add it to the scene, preserving spatial transform
+            scene.attach(object);
+
+            object.userData.isGrabbed = false;
+            object.userData.grabbedBy = null;
+
+            if (applyVelocity) {
+                // Retrieve velocity tracker for this controller
+                const trackerIndex = controllers.indexOf(controller);
+                if (trackerIndex !== -1) {
+                    const velocity = getControllerVelocity(controllerTrackers[trackerIndex]);
+                    // Limit throwing speed sanity check
+                    velocity.clampLength(0, 15);
+                    object.userData.velocity.copy(velocity);
+                }
+            } else {
+                object.userData.velocity.set(0, 0, 0);
+            }
+
+            // Restore controller laser visual color
+            const laser = controller.getObjectByName("laser");
+            if (laser) laser.material.color.setHex(0x8a2be2);
+        }
+
+        // Helper to update moving controller position list
+        function updateControllerVelocityTracker(tracker) {
+            const currentPosition = new THREE.Vector3();
+            currentPosition.setFromMatrixPosition(tracker.controller.matrixWorld);
+            
+            tracker.history.push({
+                position: currentPosition,
+                time: performance.now()
+            });
+
+            // Keep only latest 8 frames (approx 90-130ms) for high-responsiveness throwing
+            if (tracker.history.length > 8) {
+                tracker.history.shift();
+            }
+        }
+
+        // Helper to calculate throwing velocity from history
+        function getControllerVelocity(tracker) {
+            if (tracker.history.length < 2) return new THREE.Vector3();
+
+            const oldest = tracker.history[0];
+            const newest = tracker.history[tracker.history.length - 1];
+            
+            // dt in seconds
+            const dt = (newest.time - oldest.time) / 1000;
+            if (dt <= 0.001) return new THREE.Vector3();
+
+            // v = delta_position / delta_time
+            const velocity = new THREE.Vector3();
+            velocity.subVectors(newest.position, oldest.position).divideScalar(dt);
+            
+            // Add a minor upward throw boost factor for satisfying gameplay mechanics
+            velocity.y += 0.5;
+
+            return velocity;
+        }
+
+        // Controller Start/End Action Handler Loops
+        function onSelectStart(event) {
+            const controller = event.target;
+            const targetObject = checkGrabSelection(controller);
+            if (targetObject && !targetObject.userData.inPot) {
+                grabObject(controller, targetObject);
+            }
+        }
+
+        function onSelectEnd(event) {
+            const controller = event.target;
+            // Find which object is grabbed by this controller
+            ingredients.forEach(item => {
+                if (item.userData.grabbedBy === controller) {
+                    releaseObject(controller, item);
+                }
+            });
+        }
+
+        // --- 3. Interaction 2: Arc Teleportation Navigation ---
+
+        function onSqueezeStart(event) {
+            const controller = event.target;
+            // Only draw one teleport arc at a time
+            if (!activeTeleportController) {
+                activeTeleportController = controller;
+                controller.userData.isTeleporting = true;
+            }
+        }
+
+        function onSqueezeEnd(event) {
+            const controller = event.target;
+            if (activeTeleportController === controller) {
+                controller.userData.isTeleporting = false;
+                
+                const idx = controllers.indexOf(controller);
+                const marker = teleportMarkers[idx];
+                
+                // If marker is pointing at a valid ground, trigger player movement
+                if (marker.visible) {
+                    const destination = new THREE.Vector3();
+                    destination.copy(marker.position);
+                    teleportPlayer(destination);
+                }
+
+                // Hide visuals
+                teleportArcs[idx].visible = false;
+                marker.visible = false;
+                activeTeleportController = null;
+            }
+        }
+
+        function drawTeleportArc(controller) {
+            const idx = controllers.indexOf(controller);
+            const arcLine = teleportArcs[idx];
+            const marker = teleportMarkers[idx];
+
+            // Get starting parameters for parabolic arc projection
+            const p0 = new THREE.Vector3();
+            p0.setFromMatrixPosition(controller.matrixWorld);
+
+            const tempMatrix = new THREE.Matrix4();
+            tempMatrix.identity().extractRotation(controller.matrixWorld);
+            const dir = new THREE.Vector3(0, 0, -1).applyMatrix4(tempMatrix).normalize();
+
+            // Parabolic starting velocity representation
+            const initialVelocity = 6.5; // arc throw power
+            const v0 = dir.multiplyScalar(initialVelocity);
+
+            // Draw points
+            const points = [];
+            const pos = new THREE.Vector3().copy(p0);
+            const velocity = new THREE.Vector3().copy(v0);
+            const dt = 0.035; // calculation delta time
+            const arcGravity = -9.8;
+
+            let hitPoint = null;
+
+            for (let i = 0; i < 40; i++) {
+                points.push(pos.clone());
+
+                // Kinematic equations: p = p + v*dt; v = v + g*dt
+                pos.addScaledVector(velocity, dt);
+                velocity.y += arcGravity * dt;
+
+                // Stop arc generation when path collides with the floor level
+                if (pos.y <= FLOOR_LEVEL) {
+                    // Linear interpolation to find precise intersection point on plane y=0
+                    const prevPos = points[points.length - 1];
+                    const t = (FLOOR_LEVEL - prevPos.y) / (pos.y - prevPos.y);
+                    const exactHit = new THREE.Vector3().lerpVectors(prevPos, pos, t);
+                    exactHit.y = FLOOR_LEVEL;
+                    
+                    points.push(exactHit);
+                    hitPoint = exactHit;
+                    break;
+                }
+            }
+
+            // Update line geometry buffer
+            arcLine.geometry.dispose();
+            arcLine.geometry = new THREE.BufferGeometry().setFromPoints(points);
+            arcLine.visible = true;
+
+            if (hitPoint) {
+                // Place target landing marker ring
+                marker.position.copy(hitPoint).y += 0.01; // prevent floor z-fighting
+                marker.visible = true;
+            } else {
+                marker.visible = false;
+            }
+        }
+
+        function teleportPlayer(targetVector) {
+            // Correct spatial offset adjustment: We must move the CameraGroup 
+            // so that the internal camera lands precisely on target vector
+            const cameraWorldPos = new THREE.Vector3();
+            camera.getWorldPosition(cameraWorldPos);
+            
+            // Project offset on horizontal plane (Y offset ignored for VR teleport)
+            const cameraOffset = new THREE.Vector3();
+            cameraOffset.subVectors(cameraWorldPos, cameraGroup.position);
+            cameraOffset.y = 0;
+
+            // Offset group position to place headset center on landing ring
+            cameraGroup.position.copy(targetVector).sub(cameraOffset);
+            
+            // Visual feedback announcement in desktop UI or log console
+            showFlashMessage("Teleported!");
+        }
+
+        // --- 4. Game Logic & Trigger Functions (The Core Feature) ---
+
+        function checkCauldronCollision() {
+            // A continuous frame-by-frame loop checking if ingredient meshes intersect the cauldron's top open volume.
+            ingredients.forEach(item => {
+                if (item.userData.inPot || item.userData.isGrabbed) return;
+
+                // Vertical distance check: item falls into the cauldron volume
+                const cauldronTopY = CAULDRON_POS.y + CAULDRON_HEIGHT;
+                
+                // Get world position of ingredient
+                const itemPos = new THREE.Vector3();
+                item.getWorldPosition(itemPos);
+
+                // Horizontal distance calculation (radius check)
+                const horizontalDist = Math.sqrt(
+                    Math.pow(itemPos.x - CAULDRON_POS.x, 2) +
+                    Math.pow(itemPos.z - CAULDRON_POS.z, 2)
+                );
+
+                // Collision detection triggers when item drops below rim and is within the cauldron interior
+                if (itemPos.y <= cauldronTopY + 0.05 && itemPos.y >= CAULDRON_POS.y && horizontalDist <= CAULDRON_RADIUS * 0.85) {
+                    addIngredientToPot(item.userData.name);
+                }
+            });
+        }
+
+        function addIngredientToPot(ingredientName) {
+            // Track the ingredients inside an array
+            ingredientsInPot.push(ingredientName);
+            
+            // Find reference mesh
+            const item = ingredientName === "Toad Egg" ? toadEgg : flyAmanita;
+            item.userData.inPot = true;
+            item.userData.velocity.set(0, 0, 0);
+
+            // Animate object falling / dissolving into pot fluid
+            new THREE.Texture(); // placeholder load dummy
+            fadeOutIngredientIntoLiquid(item);
+
+            // Update UI/HUD badges
+            if (ingredientName === "Toad Egg") {
+                const badge = document.getElementById("status-toad");
+                badge.innerText = "Added";
+                badge.className = "hud-value status-badge status-added";
+            } else if (ingredientName === "Fly Amanita") {
+                const badge = document.getElementById("status-mushroom");
+                badge.innerText = "Added";
+                badge.className = "hud-value status-badge status-added";
+            }
+
+            showFlashMessage(`${ingredientName} added to the pot!`);
+
+            // Splash visual effect: flash cauldron light, ripple fluid emissive
+            cauldron.userData.light.intensity = 20.0;
+            cauldron.userData.light.color.setHex(0x9d4edd); // Purple flash
+
+            // Validate recipe combinations
+            checkRecipe();
+        }
+
+        function checkRecipe() {
+            // Validates if the combination matches "Toad Egg" + "Fly Amanita"
+            const hasToad = ingredientsInPot.includes("Toad Egg");
+            const hasMushroom = ingredientsInPot.includes("Fly Amanita");
+
+            if (hasToad && hasMushroom && !isAntigravityActive) {
+                // Success: Start the Antigravity Showstopper event
+                triggerAntigravityEffect();
+            } else {
+                // Still waiting on ingredients update cauldron HUD label
+                const activeCount = ingredientsInPot.length;
+                const cauldronHUD = document.getElementById("status-cauldron");
+                cauldronHUD.innerText = `${activeCount} / 2 Ingredients`;
+                cauldronHUD.style.color = "#d8bfd8";
+            }
+        }
+
+        function fadeOutIngredientIntoLiquid(mesh) {
+            // Animate scale shrink down to simulate sinking / melting
+            const duration = 800; // ms
+            const startScale = mesh.scale.clone();
+            const startTime = performance.now();
+
+            function shrinkLoop() {
+                const elapsed = performance.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1.0);
+                
+                // Scale shrink
+                mesh.scale.copy(startScale).multiplyScalar(1.0 - progress);
+                
+                // Slow sink downwards
+                mesh.position.y -= 0.003;
+
+                if (progress < 1.0) {
+                    requestAnimationFrame(shrinkLoop);
+                } else {
+                    mesh.visible = false; // Hide completely
+                }
+            }
+            shrinkLoop();
+        }
+
+        // --- 5. The "Antigravity Potion" Showstopper Function ---
+
+        function triggerAntigravityEffect() {
+            isAntigravityActive = true;
+            antigravityProgress = 0;
+
+            // a) UI HUD Update
+            const cauldronHUD = document.getElementById("status-cauldron");
+            cauldronHUD.innerText = "ANTIGRAVITY ACTIVE";
+            cauldronHUD.className = "hud-value status-badge status-complete";
+            cauldronHUD.style.color = "#39ff14";
+
+            showFlashMessage("Antigravity potion complete! Watch the room float!");
+
+            // b) Trigger a simple particle system (THREE.Points) rising up from the cauldron
+            createAntigravityParticles();
+
+            // Trigger visual transitions on lights
+            cauldron.userData.light.intensity = 25;
+            cauldron.userData.light.color.setHex(0x39ff14); // Electric Neon Green
+        }
+
+        function createAntigravityParticles() {
+            const particleCount = 200;
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const velocities = [];
+
+            // Spawn particles inside cauldron radius
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * (CAULDRON_RADIUS * 0.8);
+                const x = CAULDRON_POS.x + Math.cos(angle) * radius;
+                const y = CAULDRON_POS.y + CAULDRON_HEIGHT - 0.02;
+                const z = CAULDRON_POS.z + Math.sin(angle) * radius;
+
+                positions.push(x, y, z);
+                
+                // Velocity variables (rise up, slight wobble drift)
+                velocities.push(
+                    (Math.random() - 0.5) * 0.15, // vx
+                    0.3 + Math.random() * 0.4,    // vy
+                    (Math.random() - 0.5) * 0.15  // vz
+                );
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            
+            // Build circular soft glow particle texture using HTML Canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = 16;
+            canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+            grad.addColorStop(0, 'rgba(255,255,255,1)');
+            grad.addColorStop(0.3, 'rgba(57,255,20,0.8)');
+            grad.addColorStop(1, 'rgba(57,255,20,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 16, 16);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+
+            const material = new THREE.PointsMaterial({
+                size: 0.1,
+                map: texture,
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+
+            particleSystem = new THREE.Points(geometry, material);
+            scene.add(particleSystem);
+            particleSystem.userData = { velocities: velocities };
+        }
+
+        function updateAntigravityParticles(dt) {
+            if (!particleSystem) return;
+
+            const posArr = particleSystem.geometry.attributes.position.array;
+            const vel = particleSystem.userData.velocities;
+            
+            for (let i = 0; i < posArr.length; i += 3) {
+                // Update particle positions based on velocity
+                posArr[i] += vel[i] * dt;     // x
+                posArr[i+1] += vel[i+1] * dt; // y (rise)
+                posArr[i+2] += vel[i+2] * dt; // z
+
+                // Add random air wobble
+                posArr[i] += Math.sin(performance.now() * 0.005 + i) * 0.002;
+
+                // Reset particle to cauldron fluid top if it floats too high (above cabin height)
+                if (posArr[i+1] > 3.0) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const radius = Math.random() * (CAULDRON_RADIUS * 0.8);
+                    posArr[i] = CAULDRON_POS.x + Math.cos(angle) * radius;
+                    posArr[i+1] = CAULDRON_POS.y + CAULDRON_HEIGHT - 0.02;
+                    posArr[i+2] = CAULDRON_POS.z + Math.sin(angle) * radius;
+                }
+            }
+
+            particleSystem.geometry.attributes.position.needsUpdate = true;
+        }
+
+        // --- Custom Physics Simulation Engine ---
+        function updatePhysics(dt) {
+            // Apply simple custom kinematics to objects not currently grabbed
+            ingredients.forEach(item => {
+                if (item.userData.inPot) return;
+
+                if (item.userData.isGrabbed) {
+                    item.userData.onTable = false;
+                    return; // skip physics calculation if controller has ownership
+                }
+
+                const pos = item.position;
+                const vel = item.userData.velocity;
+
+                if (!isAntigravityActive) {
+                    // --- Normal Gravity Physics ---
+                    // Apply downward gravity acceleration
+                    vel.y += gravity * dt;
+
+                    // Update translation vectors
+                    pos.addScaledVector(vel, dt);
+
+                    // Floor Collision boundary
+                    const itemFloorLimit = FLOOR_LEVEL + item.userData.radius;
+                    if (pos.y < itemFloorLimit) {
+                        pos.y = itemFloorLimit;
+                        vel.y = -vel.y * 0.4; // Bounce restitution
+                        vel.x *= 0.7; // Friction damping
+                        vel.z *= 0.7;
+                    }
+
+                    // Table Collision boundary (Table surface bounds calculation)
+                    const tableTop = TABLE_HEIGHT;
+                    const halfW = TABLE_WIDTH / 2;
+                    const halfD = TABLE_DEPTH / 2;
+
+                    // Check bounds alignment relative to Table position
+                    const withinTableX = pos.x >= TABLE_POS.x - halfW && pos.x <= TABLE_POS.x + halfW;
+                    const withinTableZ = pos.z >= TABLE_POS.z - halfD && pos.z <= TABLE_POS.z + halfD;
+
+                    if (withinTableX && withinTableZ) {
+                        const tableSurfaceY = tableTop + item.userData.radius - 0.05; // slight mesh anchor offset
+                        
+                        // If item is falling down and hits the table top
+                        if (pos.y <= tableSurfaceY && vel.y < 0) {
+                            pos.y = tableSurfaceY;
+                            vel.y = -vel.y * 0.3; // bounce
+                            vel.x *= 0.6; // friction damping
+                            vel.z *= 0.6;
+                            item.userData.onTable = true;
+                        }
+                    } else {
+                        item.userData.onTable = false;
+                    }
+
+                    // Cauldron outer shell collision (basic cylinder boundary push)
+                    const distToCauldronXZ = Math.sqrt(
+                        Math.pow(pos.x - CAULDRON_POS.x, 2) +
+                        Math.pow(pos.z - CAULDRON_POS.z, 2)
+                    );
+                    
+                    const cauldronTopY = CAULDRON_POS.y + CAULDRON_HEIGHT;
+                    // Only collide and bounce off the outer shell if we are outside the inner radius
+                    // This allows items falling down into the middle to bypass this outward bounce!
+                    if (distToCauldronXZ < CAULDRON_RADIUS + item.userData.radius && 
+                        distToCauldronXZ > CAULDRON_RADIUS * 0.8 && 
+                        pos.y < cauldronTopY) {
+                        
+                        // calculate normal vector pushing out
+                        const pushNormal = new THREE.Vector3(pos.x - CAULDRON_POS.x, 0, pos.z - CAULDRON_POS.z).normalize();
+                        pos.x = CAULDRON_POS.x + pushNormal.x * (CAULDRON_RADIUS + item.userData.radius);
+                        pos.z = CAULDRON_POS.z + pushNormal.z * (CAULDRON_RADIUS + item.userData.radius);
+                        
+                        // Bounce velocities outwards
+                        const speed = Math.sqrt(vel.x*vel.x + vel.z*vel.z);
+                        vel.x = pushNormal.x * speed * 0.5;
+                        vel.z = pushNormal.z * speed * 0.5;
+                    }
+
+                } else {
+                    // --- Showstopper Antigravity Physics Mode ---
+                    // CRITICAL requirement: Lose gravity simulation and drift slowly upward translation vector
+                    // Slowly decelerate initial velocities to complete weightlessness drift
+                    vel.multiplyScalar(0.95);
+                    pos.addScaledVector(vel, dt);
+
+                    // Continuous slow upward drifting translation vector
+                    pos.y += 0.01 * 60 * dt; // exactly 1cm per normal frame tick
+
+                    // Gentle circular floating rotation wobble for premium magic visual feel
+                    const floatWobbleTime = performance.now() * 0.001;
+                    pos.x += Math.sin(floatWobbleTime + item.id) * 0.0015;
+                    pos.z += Math.cos(floatWobbleTime + item.id) * 0.0015;
+                    
+                    item.rotation.x += 0.002;
+                    item.rotation.y += 0.004;
+
+                    // If items float above room ceiling (3.2m), wrap them back to the table level to maintain loop interaction
+                    if (pos.y > 3.2) {
+                        pos.y = TABLE_HEIGHT + 0.1;
+                        pos.x = item.userData.initialPos.x + (Math.random() - 0.5) * 0.2;
+                        pos.z = item.userData.initialPos.z + (Math.random() - 0.5) * 0.2;
+                        vel.set(0,0,0);
+                    }
+                }
+            }
+            );
+        }
+
+        // --- Render Loop (WebXR Compatible) ---
+        function animate(timestamp, frame) {
+            const dt = Math.min(clock.getDelta(), 0.1); // clamp dt to avoid physics explode spikes
+
+            // 1. Process VR Controller tracking positions
+            if (renderer.xr.isPresenting) {
+                controllerTrackers.forEach(updateControllerVelocityTracker);
+
+                // Handle teleport arcs visualization when squeeze is active
+                controllers.forEach(controller => {
+                    if (controller.userData.isTeleporting) {
+                        drawTeleportArc(controller);
+                    }
+                });
+            }
+
+            // 2. Perform Custom Physics kinematics
+            updatePhysics(dt);
+
+            // 3. Perform Cauldron Collision verification
+            checkCauldronCollision();
+
+            // 4. Update Antigravity Potion Visual Showstopper States
+            if (isAntigravityActive) {
+                // Interpolate cauldron fluid color towards glowing neon green
+                antigravityProgress = Math.min(antigravityProgress + dt * 0.8, 1.0);
+                
+                // Color transition to glowing green
+                fluidMaterial.color.lerpColors(new THREE.Color(0x4a0e80), new THREE.Color(0x39ff14), antigravityProgress);
+                fluidMaterial.emissive.lerpColors(new THREE.Color(0x240046), new THREE.Color(0x19a008), antigravityProgress);
+                
+                // Pulsing light intensity animation
+                cauldron.userData.light.intensity = 15.0 + Math.sin(performance.now() * 0.008) * 5.0;
+
+                // Animate floating bubbling cauldron liquid plane slightly
+                cauldronFluid.position.y = (CAULDRON_HEIGHT - 0.05) + Math.sin(performance.now() * 0.003) * 0.008;
+
+                // Rise mystical green particle system points
+                updateAntigravityParticles(dt);
+            } else {
+                // Idle purple cauldron fluid animation
+                cauldronFluid.position.y = (CAULDRON_HEIGHT - 0.05) + Math.sin(performance.now() * 0.002) * 0.005;
+                cauldron.userData.light.intensity = 8.0 + Math.sin(performance.now() * 0.004) * 2.0;
+            }
+
+            // 5. Orbit Controls Update for Desktop viewport fallback
+            if (!renderer.xr.isPresenting) {
+                controls.update();
+            }
+
+            // 6. Output to display screen
+            renderer.render(scene, camera);
+        }
+
+        // --- Desktop testing helpers ---
+        function initDesktopInteractions() {
+            const container = document.getElementById('canvas-container');
+
+            container.addEventListener('mousedown', onDesktopMouseDown);
+            container.addEventListener('mousemove', onDesktopMouseMove);
+            container.addEventListener('mouseup', onDesktopMouseUp);
+        }
+
+        function onDesktopMouseDown(event) {
+            // Check if left click clicked an ingredient
+            updateMouseCoordinates(event);
+
+            raycasterDesktop.setFromCamera(mousePosition, camera);
+            const intersects = raycasterDesktop.intersectObjects(ingredients, true);
+
+            if (intersects.length > 0) {
+                // Find base ingredient group
+                let obj = intersects[0].object;
+                while (obj.parent && !obj.userData.name) {
+                    obj = obj.parent;
+                }
+
+                if (obj && !obj.userData.inPot) {
+                    desktopGrabbedObject = obj;
+                    desktopGrabbedObject.userData.isGrabbed = true;
+                    desktopGrabbedObject.userData.velocity.set(0, 0, 0);
+
+                    // Deactivate camera orbit navigation to allow item drag
+                    controls.enabled = false;
+                    isOrbitingEnabled = false;
+
+                    // Calculate distance to camera to maintain drag depth
+                    const objWorldPos = new THREE.Vector3();
+                    desktopGrabbedObject.getWorldPosition(objWorldPos);
+                    desktopGrabDepth = camera.position.distanceTo(objWorldPos);
+
+                    // Clear drag position histories
+                    desktopPositionHistory.length = 0;
+                    desktopPositionHistory.push({
+                        pos: objWorldPos.clone(),
+                        time: performance.now()
+                    });
+                }
+            }
+        }
+
+        function onDesktopMouseMove(event) {
+            if (!desktopGrabbedObject) return;
+
+            updateMouseCoordinates(event);
+            
+            // Re-project mouse coordinates to 3D world space at the recorded camera depth
+            const ray = new THREE.Vector3(mousePosition.x, mousePosition.y, 0.5).unproject(camera);
+            const dir = ray.sub(camera.position).normalize();
+            const targetPos = new THREE.Vector3().copy(camera.position).addScaledVector(dir, desktopGrabDepth);
+            
+            // Apply coordinates to object
+            desktopGrabbedObject.position.copy(targetPos);
+
+            // Record track history for release throwing calculation
+            desktopPositionHistory.push({
+                pos: targetPos.clone(),
+                time: performance.now()
+            });
+            if (desktopPositionHistory.length > 6) {
+                desktopPositionHistory.shift();
+            }
+        }
+
+        function onDesktopMouseUp() {
+            if (!desktopGrabbedObject) return;
+
+            const obj = desktopGrabbedObject;
+            obj.userData.isGrabbed = false;
+            desktopGrabbedObject = null;
+
+            // Re-enable camera orbit controls
+            controls.enabled = true;
+            isOrbitingEnabled = true;
+
+            // Calculate mouse velocity vector throw force
+            if (desktopPositionHistory.length >= 2) {
+                const oldest = desktopPositionHistory[0];
+                const newest = desktopPositionHistory[desktopPositionHistory.length - 1];
+                const dt = (newest.time - oldest.time) / 1000;
+
+                if (dt > 0.001) {
+                    const throwVelocity = new THREE.Vector3();
+                    throwVelocity.subVectors(newest.pos, oldest.pos).divideScalar(dt);
+                    
+                    // Scale mouse drag speed to realistic throwing velocity
+                    throwVelocity.multiplyScalar(0.45); 
+                    // Add minor forward throw boost in camera looking direction
+                    const camDir = new THREE.Vector3();
+                    camera.getWorldDirection(camDir);
+                    throwVelocity.addScaledVector(camDir, 0.5);
+
+                    throwVelocity.clampLength(0, 10); // cap speed
+                    obj.userData.velocity.copy(throwVelocity);
+                }
+            }
+        }
+
+        function updateMouseCoordinates(event) {
+            mousePosition.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mousePosition.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        }
+
+        // Setup HTML Panel simulator trigger interactions
+        function initSimulatorButtons() {
+            // Drop Toad Egg
+            document.getElementById('btn-drop-toad').addEventListener('click', () => {
+                if (toadEgg.userData.inPot) return;
+                
+                // Animate drop directly from above cauldron
+                toadEgg.position.set(CAULDRON_POS.x, CAULDRON_POS.y + CAULDRON_HEIGHT + 0.6, CAULDRON_POS.z);
+                toadEgg.userData.velocity.set(0, -2, 0);
+                toadEgg.userData.isGrabbed = false;
+                toadEgg.userData.onTable = false;
+                controls.target.copy(CAULDRON_POS);
+            });
+
+            // Drop Fly Amanita
+            document.getElementById('btn-drop-mushroom').addEventListener('click', () => {
+                if (flyAmanita.userData.inPot) return;
+
+                // Animate drop directly from above cauldron
+                flyAmanita.position.set(CAULDRON_POS.x, CAULDRON_POS.y + CAULDRON_HEIGHT + 0.6, CAULDRON_POS.z);
+                flyAmanita.userData.velocity.set(0, -2, 0);
+                flyAmanita.userData.isGrabbed = false;
+                flyAmanita.userData.onTable = false;
+                controls.target.copy(CAULDRON_POS);
+            });
+
+            // Reset simulation states
+            document.getElementById('btn-reset').addEventListener('click', resetSimulation);
+        }
+
+        function resetSimulation() {
+            isAntigravityActive = false;
+            ingredientsInPot.length = 0;
+
+            // Reset Toad Egg
+            toadEgg.visible = true;
+            toadEgg.scale.set(1, 1, 1);
+            toadEgg.position.copy(toadEgg.userData.initialPos);
+            toadEgg.userData.velocity.set(0,0,0);
+            toadEgg.userData.inPot = false;
+            toadEgg.userData.onTable = true;
+            toadEgg.rotation.set(0,0,0);
+
+            // Reset Fly Amanita
+            flyAmanita.visible = true;
+            flyAmanita.scale.set(1, 1, 1);
+            flyAmanita.position.copy(flyAmanita.userData.initialPos);
+            flyAmanita.userData.velocity.set(0,0,0);
+            flyAmanita.userData.inPot = false;
+            flyAmanita.userData.onTable = true;
+            flyAmanita.rotation.set(0,0,0);
+
+            // Clean particles
+            if (particleSystem) {
+                scene.remove(particleSystem);
+                particleSystem = null;
+            }
+
+            // Restore HUD values
+            document.getElementById("status-toad").innerText = "Missing";
+            document.getElementById("status-toad").className = "hud-value status-badge status-missing";
+            
+            document.getElementById("status-mushroom").innerText = "Missing";
+            document.getElementById("status-mushroom").className = "hud-value status-badge status-missing";
+
+            const cauldronHUD = document.getElementById("status-cauldron");
+            cauldronHUD.innerText = "Inactive";
+            cauldronHUD.className = "hud-value";
+            cauldronHUD.style.color = "#ff6347";
+
+            // Restore fluid color
+            fluidMaterial.color.setHex(0x4a0e80);
+            fluidMaterial.emissive.setHex(0x240046);
+            cauldron.userData.light.color.setHex(0x7b2cbf);
+
+            showFlashMessage("Witch's room reset successfully.");
+            controls.target.set(0, 0.8, -1.2);
+        }
+
+        function showFlashMessage(text) {
+            msgBanner.innerText = text;
+            msgBanner.style.opacity = 1.0;
+            
+            // Fade out after 2.5s
+            setTimeout(() => {
+                if (msgBanner.innerText === text) {
+                    msgBanner.style.opacity = 0.0;
+                }
+            }, 2500);
+        }
+
+        // --- Window Resize Handler ---
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- Procedural Texture Helpers for Premium Graphics ---
+        function createProceduralWoodTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            // Rustic deep brown wood floor planks
+            ctx.fillStyle = '#22140a';
+            ctx.fillRect(0, 0, 512, 512);
+
+            // Plank dividers
+            ctx.strokeStyle = '#120a05';
+            ctx.lineWidth = 4;
+            const plankWidth = 512 / 6;
+            for (let i = 0; i <= 6; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * plankWidth, 0);
+                ctx.lineTo(i * plankWidth, 512);
+                ctx.stroke();
+            }
+
+            // Grain and stains overlay
+            for (let i = 0; i < 400; i++) {
+                ctx.fillStyle = Math.random() > 0.5 ? 'rgba(34, 15, 5, 0.15)' : 'rgba(0, 0, 0, 0.12)';
+                const w = 4 + Math.random() * 15;
+                const h = 40 + Math.random() * 150;
+                const x = Math.random() * 512;
+                const y = Math.random() * 512;
+                ctx.fillRect(x, y, w, h);
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(6, 6);
+            return texture;
+        }
+
+        function createProceduralTableTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            // Rich warm mahogany color base
+            ctx.fillStyle = '#442111';
+            ctx.fillRect(0, 0, 256, 256);
+
+            // Wood lines details
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+            for (let i = 0; i < 15; i++) {
+                ctx.fillRect(0, Math.random() * 256, 256, 2 + Math.random() * 6);
+            }
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+            for (let i = 0; i < 5; i++) {
+                ctx.fillRect(0, Math.random() * 256, 256, 1 + Math.random() * 3);
+            }
+
+            return new THREE.CanvasTexture(canvas);
+        }
+    </script>
+</body>
+</html>
