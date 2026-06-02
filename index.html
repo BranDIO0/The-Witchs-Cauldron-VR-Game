@@ -436,6 +436,7 @@
         let fireplaceLight;
         let fireplaceParticles;
         let fireplaceParticleData = [];
+        let crystalBallLight;
 
         // --- 4. Magic Tome Discovery State ---
         const discoveredPotions = {}; // Stores { "Item A + Item B": { discovered: false/true, potionName: String, ... } }
@@ -1077,6 +1078,12 @@
 
             // 12. Build cozy decorative details (sleeping cat, broom, hanging herbs, sheepskin rug)
             buildCozyDetails(beamMaterial);
+
+            // 13. Build wooden sideboards with glass doors along far wall and potted plants/ivy
+            buildSideboardsAndPlants(beamMaterial);
+
+            // 14. Build right wall cozy furniture (writing desk, stool, quill, glowing crystal ball, and framed gallery paintings)
+            buildRightSideFurniture(beamMaterial);
         }
 
         // --- Window Structure Constructor ---
@@ -1431,7 +1438,7 @@
         // --- Wooden Bookshelf Constructor ---
         function buildBookshelf(beamMaterial) {
             const shelfGroup = new THREE.Group();
-            shelfGroup.position.set(3.3, 0, -1.0); // Placed on Right Wall (X = 3.5)
+            shelfGroup.position.set(3.3, 0, -2.0); // Placed on Right Wall (X = 3.5) between study desk and sideboards
             shelfGroup.rotation.y = -Math.PI / 2;  // Face inwards (-X)
             scene.add(shelfGroup);
 
@@ -1615,7 +1622,7 @@
         function buildReadingCorner(beamMaterial) {
             const rcGroup = new THREE.Group();
             rcGroup.position.set(2.0, 0, 1.8); // Placed in Back-Right corner
-            rcGroup.rotation.y = -Math.PI / 4;  // Angled towards player and cauldron
+            rcGroup.rotation.y = Math.atan2(-2.0, -2.9);  // Face the cauldron exactly
             scene.add(rcGroup);
 
             // 1. Circular Woven Fabric Rug
@@ -2342,6 +2349,345 @@
             scene.add(fireplaceRug);
         }
 
+        // --- Sideboards & Interior Plants Constructor ---
+        function buildSideboardsAndPlants(beamMaterial) {
+            const woodMat = beamMaterial;
+            const counterTopMat = new THREE.MeshStandardMaterial({
+                color: 0x24160c, // rich dark oak wood top
+                roughness: 0.8
+            });
+
+            // glass material for door panes
+            const glassMat = new THREE.MeshStandardMaterial({
+                color: 0x90ccff,
+                transparent: true,
+                opacity: 0.22,
+                roughness: 0.1,
+                metalness: 0.95
+            });
+
+            const ironMat = new THREE.MeshStandardMaterial({
+                color: 0x1f1f1f,
+                metalness: 0.8,
+                roughness: 0.5
+            });
+
+            // Helper to build a modular sideboard cabinet
+            function buildSingleCabinet(xCenter, width) {
+                const cabGroup = new THREE.Group();
+                cabGroup.position.set(xCenter, 0, -3.76); // against far wall at Z = -4.0 (offset by depth/2)
+                scene.add(cabGroup);
+
+                const cW = width;
+                const cH = 0.85;
+                const cD = 0.38;
+
+                // 1. Back panel
+                const back = new THREE.Mesh(new THREE.BoxGeometry(cW, cH, 0.02), woodMat);
+                back.position.set(0, cH / 2, -cD / 2 + 0.01);
+                back.receiveShadow = true;
+                cabGroup.add(back);
+
+                // 2. Left and Right side panels
+                const sideL = new THREE.Mesh(new THREE.BoxGeometry(0.03, cH, cD - 0.02), woodMat);
+                sideL.position.set(-cW / 2 + 0.015, cH / 2, 0.01);
+                sideL.castShadow = true;
+                sideL.receiveShadow = true;
+                cabGroup.add(sideL);
+
+                const sideR = new THREE.Mesh(new THREE.BoxGeometry(0.03, cH, cD - 0.02), woodMat);
+                sideR.position.set(cW / 2 - 0.015, cH / 2, 0.01);
+                sideR.castShadow = true;
+                sideR.receiveShadow = true;
+                cabGroup.add(sideR);
+
+                // 3. Middle vertical divider
+                const divider = new THREE.Mesh(new THREE.BoxGeometry(0.03, cH - 0.06, cD - 0.04), woodMat);
+                divider.position.set(0, cH / 2, 0);
+                divider.castShadow = true;
+                cabGroup.add(divider);
+
+                // 4. Bottom base board
+                const bottom = new THREE.Mesh(new THREE.BoxGeometry(cW - 0.06, 0.05, cD - 0.02), woodMat);
+                bottom.position.set(0, 0.025, 0.01);
+                bottom.receiveShadow = true;
+                cabGroup.add(bottom);
+
+                // 5. Wooden countertop
+                const top = new THREE.Mesh(new THREE.BoxGeometry(cW + 0.04, 0.05, cD + 0.04), counterTopMat);
+                top.position.set(0, cH + 0.025, 0);
+                top.castShadow = true;
+                top.receiveShadow = true;
+                cabGroup.add(top);
+
+                // 6. Middle horizontal shelves (left and right compartments)
+                const shelfL = new THREE.Mesh(new THREE.BoxGeometry(cW / 2 - 0.045, 0.02, cD - 0.04), woodMat);
+                shelfL.position.set(-cW / 4 - 0.0075, cH / 2, 0);
+                shelfL.castShadow = true;
+                shelfL.receiveShadow = true;
+                cabGroup.add(shelfL);
+
+                const shelfR = new THREE.Mesh(new THREE.BoxGeometry(cW / 2 - 0.045, 0.02, cD - 0.04), woodMat);
+                shelfR.position.set(cW / 4 + 0.0075, cH / 2, 0);
+                shelfR.castShadow = true;
+                shelfR.receiveShadow = true;
+                cabGroup.add(shelfR);
+
+                // 7. Populating shelves (inside the cabinet, visible through glass)
+                // Spawn books on bottom shelf left
+                const bookCol = [0x70001a, 0x152c54, 0x473426];
+                for (let i = 0; i < 3; i++) {
+                    const book = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.02, 0.16, 0.12),
+                        new THREE.MeshStandardMaterial({ color: bookCol[i], roughness: 0.8 })
+                    );
+                    book.position.set(-cW / 3.2 + i * 0.035, 0.13, 0);
+                    book.castShadow = true;
+                    cabGroup.add(book);
+                }
+
+                // Spawn scrolls on top shelf left
+                for (let i = 0; i < 2; i++) {
+                    const scroll = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.14, 8), new THREE.MeshStandardMaterial({ color: 0xfaeed6, roughness: 0.9 }));
+                    scroll.rotation.x = Math.PI / 2;
+                    scroll.rotation.z = 0.3 * (i - 0.5);
+                    scroll.position.set(-cW / 3 + i * 0.07, cH / 2 + 0.03, 0.02);
+                    scroll.castShadow = true;
+                    cabGroup.add(scroll);
+                }
+
+                // Spawn colorful potion bottles on bottom shelf right
+                const potColors = [0x86e22f, 0xff4500, 0x8a2be2];
+                for (let i = 0; i < 3; i++) {
+                    const bot = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.07, 8), glassMat);
+                    bot.position.set(cW / 5.2 + i * 0.05, 0.085, 0.02);
+                    bot.castShadow = true;
+                    cabGroup.add(bot);
+
+                    const liquid = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.045, 8), new THREE.MeshStandardMaterial({ color: potColors[i], emissive: potColors[i], emissiveIntensity: 1.1 }));
+                    liquid.position.set(cW / 5.2 + i * 0.05, 0.07, 0.02);
+                    cabGroup.add(liquid);
+
+                    const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.01, 0.012, 8), new THREE.MeshStandardMaterial({ color: 0x8b5a2b }));
+                    cork.position.set(cW / 5.2 + i * 0.05, 0.125, 0.02);
+                    cabGroup.add(cork);
+                }
+
+                // Spawn spellbooks on top shelf right
+                const bookR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.035, 0.18), new THREE.MeshStandardMaterial({ color: 0x612975, roughness: 0.8 }));
+                bookR.position.set(cW / 4, cH / 2 + 0.03, 0);
+                bookR.rotation.y = 0.25;
+                bookR.castShadow = true;
+                cabGroup.add(bookR);
+
+                // 8. Dual glass doors
+                const doorW = cW / 2 - 0.035;
+                const doorH = cH - 0.06;
+                const frameTh = 0.03;
+
+                // Helper to create a door
+                function buildDoorSide(isRightSide) {
+                    const door = new THREE.Group();
+                    const sign = isRightSide ? 1 : -1;
+                    door.position.set(sign * (doorW / 2 + 0.015), cH / 2, cD / 2 - 0.005);
+                    cabGroup.add(door);
+
+                    // Wooden frame around door
+                    const borderH = new THREE.Mesh(new THREE.BoxGeometry(doorW, frameTh, 0.02), woodMat);
+                    borderH.position.set(0, doorH / 2 - frameTh / 2, 0);
+                    borderH.castShadow = true;
+                    door.add(borderH);
+
+                    const borderH2 = new THREE.Mesh(new THREE.BoxGeometry(doorW, frameTh, 0.02), woodMat);
+                    borderH2.position.set(0, -doorH / 2 + frameTh / 2, 0);
+                    borderH2.castShadow = true;
+                    door.add(borderH2);
+
+                    const borderV = new THREE.Mesh(new THREE.BoxGeometry(frameTh, doorH - frameTh * 2, 0.02), woodMat);
+                    borderV.position.set(-doorW / 2 + frameTh / 2, 0, 0);
+                    borderV.castShadow = true;
+                    door.add(borderV);
+
+                    const borderV2 = new THREE.Mesh(new THREE.BoxGeometry(frameTh, doorH - frameTh * 2, 0.02), woodMat);
+                    borderV2.position.set(doorW / 2 - frameTh / 2, 0, 0);
+                    borderV2.castShadow = true;
+                    door.add(borderV2);
+
+                    // Glass pane inside
+                    const pane = new THREE.Mesh(new THREE.PlaneGeometry(doorW - frameTh * 2, doorH - frameTh * 2), glassMat);
+                    pane.position.set(0, 0, 0.002);
+                    door.add(pane);
+
+                    // Small ring door handle
+                    const handle = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 8), ironMat);
+                    // handles placed near center gap
+                    handle.position.set(-sign * (doorW / 2 - 0.04), 0, 0.014);
+                    handle.castShadow = true;
+                    door.add(handle);
+                }
+
+                buildDoorSide(false); // Left Door
+                buildDoorSide(true);  // Right Door
+            }
+
+            // Build three sideboards (Left, Center under window, Right)
+            const sideboardW = 1.8;
+            buildSingleCabinet(-2.2, sideboardW);
+            buildSingleCabinet(0, sideboardW);
+            buildSingleCabinet(2.2, sideboardW);
+
+            // --- Plants and Growing Nature Inside Cabin ---
+            const leafMat = new THREE.MeshStandardMaterial({
+                color: 0x2e5c36, // deep forest leaf green
+                roughness: 0.9
+            });
+            const clayPotMat = new THREE.MeshStandardMaterial({
+                color: 0xb56d45, // terracotta
+                roughness: 0.85
+            });
+
+            // 1. Growing Ivy on Corner studs
+            function growIvy(x, z) {
+                const ivyGroup = new THREE.Group();
+                ivyGroup.position.set(x, 0, z);
+                scene.add(ivyGroup);
+
+                // Vine stem (thin green line cylinder)
+                const stem = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.005, 0.005, 3.0, 6),
+                    new THREE.MeshStandardMaterial({ color: 0x1d3c24, roughness: 0.9 })
+                );
+                stem.position.y = 1.5;
+                ivyGroup.add(stem);
+
+                // Small flat leaves growing up the stem
+                for (let y = 0.25; y < 2.9; y += 0.16) {
+                    const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.024, 6, 6), leafMat);
+                    leaf.scale.set(1.4, 0.2, 0.8);
+                    
+                    const angle = Math.random() * Math.PI * 2;
+                    leaf.position.set(Math.cos(angle) * 0.03, y, Math.sin(angle) * 0.03);
+                    leaf.rotation.set(0.2, angle, 0.3);
+                    leaf.castShadow = true;
+                    ivyGroup.add(leaf);
+                }
+            }
+
+            growIvy(-3.34, -3.84); // Far-Left corner timber post ivy
+            growIvy(3.34, -3.84);  // Far-Right corner timber post ivy
+
+            // 2. Fern Plant on top of Left Sideboard
+            const fernGroup = new THREE.Group();
+            fernGroup.position.set(-2.2, 0.9, -3.76); // On top of left sideboard
+            scene.add(fernGroup);
+
+            const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.12, 10), clayPotMat);
+            pot.position.y = 0.06;
+            pot.castShadow = true;
+            fernGroup.add(pot);
+
+            // Fern leaves branching out
+            const leafCount = 12;
+            for (let i = 0; i < leafCount; i++) {
+                const leafGroup = new THREE.Group();
+                leafGroup.position.set(0, 0.1, 0);
+                
+                const angle = (i * Math.PI * 2) / leafCount + Math.random() * 0.3;
+                const bend = 0.4 + Math.random() * 0.35; // droop angle
+                const length = 0.24 + Math.random() * 0.15;
+
+                leafGroup.rotation.y = angle;
+                leafGroup.rotation.z = bend;
+
+                const leafSeg = new THREE.Mesh(new THREE.BoxGeometry(length, 0.005, 0.04), leafMat);
+                leafSeg.position.x = length / 2; // offset hinge pivot
+                leafSeg.castShadow = true;
+                leafGroup.add(leafSeg);
+
+                fernGroup.add(leafGroup);
+            }
+
+            // 3. Glowing Mystical Flowers in Vase on Right Sideboard
+            const flowerGroup = new THREE.Group();
+            flowerGroup.position.set(2.2, 0.9, -3.76); // On top of right sideboard
+            scene.add(flowerGroup);
+
+            // Glass vase
+            const vaseMat = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.35,
+                roughness: 0.1,
+                metalness: 0.9
+            });
+            const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.16, 10), vaseMat);
+            vase.position.y = 0.08;
+            vase.castShadow = true;
+            flowerGroup.add(vase);
+
+            const stemMat = new THREE.MeshStandardMaterial({ color: 0x1c3b1e, roughness: 0.9 });
+            const glowMat = new THREE.MeshStandardMaterial({
+                color: 0x8a2be2, // deep indigo flower
+                emissive: 0x5a189a, // violet emissive glow
+                emissiveIntensity: 1.6,
+                roughness: 0.5
+            });
+
+            // 3 flower stems
+            for (let i = 0; i < 3; i++) {
+                const stemAngleX = (i - 1) * 0.25;
+                const stemAngleZ = (Math.random() - 0.5) * 0.3;
+                const stemH = 0.24 + Math.random() * 0.08;
+
+                const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, stemH, 6), stemMat);
+                stem.rotation.set(stemAngleX, 0, stemAngleZ);
+                // offset pivot
+                stem.position.set(0.015 * (i - 1), 0.08 + stemH / 2, 0);
+                stem.castShadow = true;
+                flowerGroup.add(stem);
+
+                // glowing flower head sphere
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.024, 8, 8), glowMat);
+                const stemTip = new THREE.Vector3(0, stemH / 2, 0).applyEuler(stem.rotation);
+                head.position.copy(stem.position).add(stemTip);
+                head.castShadow = true;
+                flowerGroup.add(head);
+
+                // point light for flower glow
+                const fLight = new THREE.PointLight(0x8a2be2, 1.2, 1.5);
+                fLight.position.copy(head.position);
+                flowerGroup.add(fLight);
+            }
+
+            // 4. Potted Mint Herb crate under the window
+            const mintGroup = new THREE.Group();
+            mintGroup.position.set(0.4, 0.9, -3.76); // top of center sideboard, slightly off-center
+            scene.add(mintGroup);
+
+            const boxPot = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.16), woodMat);
+            boxPot.position.y = 0.05;
+            boxPot.castShadow = true;
+            mintGroup.add(boxPot);
+
+            for (let i = 0; i < 6; i++) {
+                const ox = (Math.random() - 0.5) * 0.14;
+                const oz = (Math.random() - 0.5) * 0.08;
+
+                const stalkH = 0.08 + Math.random() * 0.06;
+                const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, stalkH, 6), stemMat);
+                stalk.position.set(ox, 0.1 + stalkH / 2, oz);
+                stalk.castShadow = true;
+                mintGroup.add(stalk);
+
+                for (let k = 0; k < 3; k++) {
+                    const leafCluster = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 6), leafMat);
+                    leafCluster.position.set(ox, 0.1 + stalkH - k * 0.02, oz);
+                    leafCluster.scale.set(1.2, 0.4, 1.2);
+                    mintGroup.add(leafCluster);
+                }
+            }
+        }
+
         // --- Procedural Cozy Plaster Wall Texture ---
         function createProceduralWallTexture() {
             const canvas = document.createElement('canvas');
@@ -2406,6 +2752,548 @@
             const texture = new THREE.CanvasTexture(canvas);
             texture.wrapS = THREE.RepeatWrapping;
             texture.wrapT = THREE.RepeatWrapping;
+            return texture;
+        }
+
+        // --- Cozy Right Wall Furniture & Paintings Constructor ---
+        function buildRightSideFurniture(beamMaterial) {
+            const woodMat = beamMaterial;
+            
+            // Desk materials
+            const deskMat = new THREE.MeshStandardMaterial({
+                color: 0x3d2716, // dark oak
+                roughness: 0.82
+            });
+            const deskTopMat = new THREE.MeshStandardMaterial({
+                color: 0x2b1a0e, // slightly darker tabletop
+                roughness: 0.78
+            });
+            const brassMat = new THREE.MeshStandardMaterial({
+                color: 0xd4af37, // gold/brass for drawer handles/stand
+                metalness: 0.9,
+                roughness: 0.2
+            });
+
+            // 1. Cozy Study/Writing Desk
+            const deskGroup = new THREE.Group();
+            deskGroup.position.set(3.22, 0, 0.45); // against the right wall at X = 3.5 (offset by table depth/2)
+            deskGroup.rotation.y = -Math.PI / 2; // Face inwards (-X)
+            scene.add(deskGroup);
+
+            const dW = 0.95;
+            const dH = 0.75;
+            const dD = 0.46;
+
+            // Desk tabletop
+            const deskTop = new THREE.Mesh(new THREE.BoxGeometry(dW, 0.04, dD), deskTopMat);
+            deskTop.position.set(0, dH - 0.02, 0);
+            deskTop.castShadow = true;
+            deskTop.receiveShadow = true;
+            deskGroup.add(deskTop);
+
+            // Desk side panels/legs
+            const legL = new THREE.Mesh(new THREE.BoxGeometry(0.04, dH - 0.04, dD - 0.04), deskMat);
+            legL.position.set(-dW / 2 + 0.04, (dH - 0.04) / 2, 0);
+            legL.castShadow = true;
+            legL.receiveShadow = true;
+            deskGroup.add(legL);
+
+            const legR = new THREE.Mesh(new THREE.BoxGeometry(0.04, dH - 0.04, dD - 0.04), deskMat);
+            legR.position.set(dW / 2 - 0.04, (dH - 0.04) / 2, 0);
+            legR.castShadow = true;
+            legR.receiveShadow = true;
+            deskGroup.add(legR);
+
+            // Back support panel
+            const backPanel = new THREE.Mesh(new THREE.BoxGeometry(dW - 0.08, 0.35, 0.02), deskMat);
+            backPanel.position.set(0, dH - 0.225, -dD / 2 + 0.03);
+            backPanel.castShadow = true;
+            deskGroup.add(backPanel);
+
+            // Drawer unit front face detailing
+            const drawerFront = new THREE.Mesh(new THREE.BoxGeometry(dW - 0.12, 0.12, 0.02), deskMat);
+            drawerFront.position.set(0, dH - 0.1, dD / 2 - 0.02);
+            drawerFront.castShadow = true;
+            deskGroup.add(drawerFront);
+
+            // Small drawer knob
+            const knob = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 8), brassMat);
+            knob.position.set(0, dH - 0.1, dD / 2 - 0.005);
+            knob.castShadow = true;
+            deskGroup.add(knob);
+
+            // 2. Wooden Stool
+            const stoolGroup = new THREE.Group();
+            stoolGroup.position.set(2.82, 0, 0.45); // tucked slightly under
+            scene.add(stoolGroup);
+
+            const sH = 0.45;
+            const sR = 0.14;
+
+            // Stool seat
+            const stoolSeat = new THREE.Mesh(new THREE.CylinderGeometry(sR, sR, 0.04, 12), deskTopMat);
+            stoolSeat.position.y = sH - 0.02;
+            stoolSeat.castShadow = true;
+            stoolSeat.receiveShadow = true;
+            stoolGroup.add(stoolSeat);
+
+            // Stool legs (3 angled legs)
+            for (let i = 0; i < 3; i++) {
+                const angle = (i * Math.PI * 2) / 3;
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.012, sH - 0.04, 8), deskMat);
+                leg.position.set(
+                    Math.cos(angle) * (sR * 0.7),
+                    (sH - 0.04) / 2,
+                    Math.sin(angle) * (sR * 0.7)
+                );
+                leg.rotation.z = -Math.cos(angle) * 0.16;
+                leg.rotation.x = Math.sin(angle) * 0.16;
+                leg.castShadow = true;
+                stoolGroup.add(leg);
+            }
+
+            // 3. Desktop Items
+            // Open scroll on desk
+            const scrollGroup = new THREE.Group();
+            scrollGroup.position.set(0, dH, 0.05);
+            scrollGroup.rotation.y = 0.12;
+            deskGroup.add(scrollGroup);
+
+            // Scroll sheet (curved parchment)
+            const parchmentMat = new THREE.MeshStandardMaterial({
+                map: createScrollTexture(),
+                roughness: 0.9,
+                side: THREE.DoubleSide
+            });
+            const scrollPaper = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.18), parchmentMat);
+            scrollPaper.rotation.x = -Math.PI / 2;
+            scrollPaper.receiveShadow = true;
+            scrollGroup.add(scrollPaper);
+
+            // Wooden rollers on the sides
+            const rollerMat = new THREE.MeshStandardMaterial({ color: 0x4a2e16, roughness: 0.8 });
+            const rollerL = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.21, 8), rollerMat);
+            rollerL.rotation.z = Math.PI / 2;
+            rollerL.position.set(0, 0.005, -0.13);
+            rollerL.castShadow = true;
+            scrollGroup.add(rollerL);
+
+            const rollerR = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.21, 8), rollerMat);
+            rollerR.rotation.z = Math.PI / 2;
+            rollerR.position.set(0, 0.005, 0.13);
+            rollerR.castShadow = true;
+            scrollGroup.add(rollerR);
+
+            // Quill and Inkwell
+            const inkwellGroup = new THREE.Group();
+            inkwellGroup.position.set(-0.3, dH, -0.08);
+            deskGroup.add(inkwellGroup);
+
+            const ceramicMat = new THREE.MeshStandardMaterial({
+                color: 0x1f2b3a, // dark teal glazed ceramic
+                roughness: 0.25,
+                metalness: 0.1
+            });
+            const inkwell = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.05, 10), ceramicMat);
+            inkwell.position.y = 0.025;
+            inkwell.castShadow = true;
+            inkwellGroup.add(inkwell);
+
+            // Quill feather
+            const quill = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.002, 0.008, 0.18, 6),
+                new THREE.MeshStandardMaterial({ color: 0xe0e6ed, roughness: 0.7 })
+            );
+            quill.scale.set(0.2, 1, 3.5);
+            quill.rotation.z = -0.4;
+            quill.rotation.x = 0.2;
+            quill.position.set(0.02, 0.075, 0.015);
+            quill.castShadow = true;
+            inkwellGroup.add(quill);
+
+            // Glowing Crystal Ball on desk
+            const cbGroup = new THREE.Group();
+            cbGroup.position.set(0.28, dH, -0.06);
+            deskGroup.add(cbGroup);
+
+            // Brass stand
+            const cbStand = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.03, 10), brassMat);
+            cbStand.position.y = 0.015;
+            cbStand.castShadow = true;
+            cbGroup.add(cbStand);
+
+            // Glass ball
+            const crystalMat = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.3,
+                roughness: 0.05,
+                metalness: 0.9
+            });
+            const ball = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 16), crystalMat);
+            ball.position.y = 0.065;
+            ball.castShadow = true;
+            cbGroup.add(ball);
+
+            // Core
+            const core = new THREE.Mesh(
+                new THREE.SphereGeometry(0.02, 8, 8),
+                new THREE.MeshBasicMaterial({ color: 0x00ffff })
+            );
+            core.position.y = 0.065;
+            cbGroup.add(core);
+
+            // Magic light inside the crystal ball (cyan-blue glow)
+            crystalBallLight = new THREE.PointLight(0x00ffff, 1.2, 1.8);
+            crystalBallLight.position.set(0, 0.065, 0);
+            crystalBallLight.castShadow = true;
+            crystalBallLight.shadow.bias = -0.001;
+            cbGroup.add(crystalBallLight);
+
+            // 4. Framed Gallery Paintings on the right wall
+            const frameMat = new THREE.MeshStandardMaterial({
+                color: 0x2c140e, // mahogany frame
+                roughness: 0.75
+            });
+
+            // Helper to build a framed painting
+            function buildPainting(zCenter, yCenter, width, height, type) {
+                const paintGroup = new THREE.Group();
+                paintGroup.position.set(3.45, yCenter, zCenter); // on right wall
+                paintGroup.rotation.y = -Math.PI / 2; // Face inwards
+                scene.add(paintGroup);
+
+                // Frame dimensions
+                const th = 0.045; // frame border thickness
+                const frameD = 0.03; // depth off the wall
+
+                // Back board / Canvas
+                const canvasTexture = createPaintingTexture(type);
+                const canvasMat = new THREE.MeshStandardMaterial({
+                    map: canvasTexture,
+                    roughness: 0.85
+                });
+                const canvasMesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), canvasMat);
+                canvasMesh.position.set(0, 0, frameD / 2 - 0.002);
+                canvasMesh.receiveShadow = true;
+                paintGroup.add(canvasMesh);
+
+                // Frame Borders (Left, Right, Top, Bottom)
+                // Top
+                const bT = new THREE.Mesh(new THREE.BoxGeometry(width + th * 2, th, frameD), frameMat);
+                bT.position.set(0, height / 2 + th / 2, 0);
+                bT.castShadow = true;
+                paintGroup.add(bT);
+
+                // Bottom
+                const bB = new THREE.Mesh(new THREE.BoxGeometry(width + th * 2, th, frameD), frameMat);
+                bB.position.set(0, -height / 2 - th / 2, 0);
+                bB.castShadow = true;
+                paintGroup.add(bB);
+
+                // Left
+                const bL = new THREE.Mesh(new THREE.BoxGeometry(th, height, frameD), frameMat);
+                bL.position.set(-width / 2 - th / 2, 0, 0);
+                bL.castShadow = true;
+                paintGroup.add(bL);
+
+                // Right
+                const bR = new THREE.Mesh(new THREE.BoxGeometry(th, height, frameD), frameMat);
+                bR.position.set(width / 2 + th / 2, 0, 0);
+                bR.castShadow = true;
+                paintGroup.add(bR);
+
+                // Thin gold trim insert (inner border)
+                const trim = new THREE.Mesh(new THREE.BoxGeometry(width + 0.01, height + 0.01, frameD + 0.004), brassMat);
+                trim.scale.set(1.01, 1.01, 0.1);
+                trim.position.set(0, 0, 0);
+                paintGroup.add(trim);
+            }
+
+            // Hang 3 paintings on the wall above the desk
+            // Painting 1 (Center): Moonlit Lake
+            buildPainting(0.45, 1.7, 0.65, 0.48, 'moon');
+
+            // Painting 2 (Left Flank): Alchemical Sun
+            buildPainting(-0.06, 1.55, 0.32, 0.32, 'sun');
+
+            // Painting 3 (Right Flank): Whispering Forest
+            buildPainting(0.96, 1.55, 0.32, 0.32, 'forest');
+        }
+
+        // --- Scroll Parchment Texture Generator ---
+        function createScrollTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#f5e8d3'; // warm vintage parchment
+            ctx.fillRect(0, 0, 256, 128);
+
+            // Shading on edges
+            const grad = ctx.createLinearGradient(0, 0, 256, 0);
+            grad.addColorStop(0, 'rgba(110, 80, 50, 0.25)');
+            grad.addColorStop(0.12, 'rgba(110, 80, 50, 0)');
+            grad.addColorStop(0.88, 'rgba(110, 80, 50, 0)');
+            grad.addColorStop(1, 'rgba(110, 80, 50, 0.25)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 256, 128);
+
+            // Alchemical glyphs/lines drawing (simulating text)
+            ctx.strokeStyle = 'rgba(75, 50, 30, 0.8)';
+            ctx.lineWidth = 1.5;
+            
+            // Draw some neat alchemical circles/symbols on left side
+            ctx.beginPath();
+            ctx.arc(60, 64, 25, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(60, 64, 15, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(60, 34);
+            ctx.lineTo(60, 94);
+            ctx.moveTo(30, 64);
+            ctx.lineTo(90, 64);
+            ctx.stroke();
+
+            // Draw handwriting lines on right side
+            ctx.strokeStyle = 'rgba(75, 50, 30, 0.6)';
+            ctx.lineWidth = 1;
+            for (let y = 30; y <= 100; y += 10) {
+                ctx.beginPath();
+                ctx.moveTo(110, y);
+                let currX = 110;
+                ctx.moveTo(currX, y);
+                while (currX < 225) {
+                    currX += 5 + Math.random() * 8;
+                    const wY = y + (Math.random() - 0.5) * 3;
+                    ctx.lineTo(currX, wY);
+                }
+                ctx.stroke();
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            return texture;
+        }
+
+        // --- Gallery Paintings Procedural Canvas Textures ---
+        function createPaintingTexture(type) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            if (type === 'moon') {
+                // Painting 1: Moonlit Lake
+                const skyGrad = ctx.createLinearGradient(0, 0, 0, 300);
+                skyGrad.addColorStop(0, '#060410');
+                skyGrad.addColorStop(0.5, '#120b24');
+                skyGrad.addColorStop(1, '#2c1642');
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(0, 0, 512, 512);
+
+                ctx.fillStyle = '#ffffff';
+                for (let i = 0; i < 40; i++) {
+                    const rx = Math.random() * 512;
+                    const ry = Math.random() * 260;
+                    ctx.fillRect(rx, ry, Math.random() * 1.5, Math.random() * 1.5);
+                }
+
+                ctx.shadowColor = '#d9e8ff';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = '#f2f6ff';
+                ctx.beginPath();
+                ctx.arc(256, 120, 30, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#120b24';
+                ctx.beginPath();
+                ctx.arc(244, 114, 28, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#100a1c';
+                ctx.beginPath();
+                ctx.moveTo(0, 320);
+                ctx.lineTo(120, 240);
+                ctx.lineTo(240, 280);
+                ctx.lineTo(380, 220);
+                ctx.lineTo(512, 300);
+                ctx.lineTo(512, 340);
+                ctx.lineTo(0, 340);
+                ctx.closePath();
+                ctx.fill();
+
+                const waterGrad = ctx.createLinearGradient(0, 320, 0, 512);
+                waterGrad.addColorStop(0, '#0f0a1c');
+                waterGrad.addColorStop(1, '#05020c');
+                ctx.fillStyle = waterGrad;
+                ctx.fillRect(0, 320, 512, 192);
+
+                const refGrad = ctx.createLinearGradient(220, 0, 290, 0);
+                refGrad.addColorStop(0, 'rgba(217, 232, 255, 0)');
+                refGrad.addColorStop(0.5, 'rgba(217, 232, 255, 0.25)');
+                refGrad.addColorStop(1, 'rgba(217, 232, 255, 0)');
+                ctx.fillStyle = refGrad;
+                for (let y = 330; y < 512; y += 4) {
+                    const w = (y - 320) * 0.45;
+                    ctx.fillRect(256 - w / 2, y, w, 2);
+                }
+
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 8; i++) {
+                    const rx = 100 + Math.random() * 312;
+                    const ry = 340 + Math.random() * 160;
+                    ctx.beginPath();
+                    ctx.moveTo(rx, ry);
+                    ctx.lineTo(rx + 30 + Math.random() * 50, ry);
+                    ctx.stroke();
+                }
+
+            } else if (type === 'sun') {
+                // Painting 2: Alchemical Sun Sigil
+                ctx.fillStyle = '#5c3822';
+                ctx.fillRect(0, 0, 512, 512);
+                
+                const parchGrad = ctx.createRadialGradient(256, 256, 50, 256, 256, 300);
+                parchGrad.addColorStop(0, '#9e734c');
+                parchGrad.addColorStop(0.7, '#6b4528');
+                parchGrad.addColorStop(1, '#472b14');
+                ctx.fillStyle = parchGrad;
+                ctx.fillRect(0, 0, 512, 512);
+
+                ctx.strokeStyle = '#dfb566';
+                ctx.shadowColor = '#ffd37a';
+                ctx.shadowBlur = 8;
+                ctx.lineWidth = 4;
+
+                ctx.beginPath();
+                ctx.arc(256, 256, 140, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(256, 256, 120, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.lineWidth = 3;
+                const rayCount = 16;
+                for (let i = 0; i < rayCount; i++) {
+                    const angle = (i * Math.PI * 2) / rayCount;
+                    const cos = Math.cos(angle);
+                    const sin = Math.sin(angle);
+                    ctx.beginPath();
+                    ctx.moveTo(256 + cos * 60, 256 + sin * 60);
+                    ctx.lineTo(256 + cos * 105, 256 + sin * 105);
+                    ctx.stroke();
+                }
+
+                ctx.fillStyle = '#fce5ad';
+                ctx.beginPath();
+                ctx.arc(256, 256, 45, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = '#533219';
+                ctx.lineWidth = 3.5;
+                ctx.shadowBlur = 0;
+                ctx.beginPath();
+                const r = 40;
+                ctx.moveTo(256, 256 + r);
+                ctx.lineTo(256 - r * 0.866, 256 - r * 0.5);
+                ctx.lineTo(256 + r * 0.866, 256 - r * 0.5);
+                ctx.closePath();
+                ctx.stroke();
+
+                ctx.strokeStyle = '#cca152';
+                ctx.lineWidth = 2.5;
+                const runeAngles = [0.2, 0.7, 1.4, 2.1, 2.8, 3.5, 4.2, 4.9, 5.6];
+                runeAngles.forEach(ang => {
+                    const cx = 256 + Math.cos(ang) * 130;
+                    const cy = 256 + Math.sin(ang) * 130;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+                    ctx.moveTo(cx - 8, cy);
+                    ctx.lineTo(cx + 8, cy);
+                    ctx.stroke();
+                });
+
+            } else if (type === 'forest') {
+                // Painting 3: Whispering Forest
+                const forestGrad = ctx.createLinearGradient(0, 0, 512, 512);
+                forestGrad.addColorStop(0, '#031718');
+                forestGrad.addColorStop(0.6, '#082b24');
+                forestGrad.addColorStop(1, '#03100d');
+                ctx.fillStyle = forestGrad;
+                ctx.fillRect(0, 0, 512, 512);
+
+                ctx.fillStyle = 'rgba(2, 12, 10, 0.4)';
+                for (let i = 0; i < 6; i++) {
+                    const px = 50 + i * 80;
+                    const ph = 150 + Math.random() * 80;
+                    ctx.beginPath();
+                    ctx.moveTo(px, 340);
+                    ctx.lineTo(px - 35, 340 + ph);
+                    ctx.lineTo(px + 35, 340 + ph);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = '#010504';
+                ctx.beginPath();
+                ctx.moveTo(0, 512);
+                ctx.quadraticCurveTo(80, 360, 160, 300);
+                ctx.quadraticCurveTo(120, 240, 90, 150);
+                ctx.lineTo(110, 145);
+                ctx.quadraticCurveTo(140, 220, 175, 290);
+                ctx.quadraticCurveTo(300, 380, 512, 440);
+                ctx.lineTo(512, 512);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(160, 300);
+                ctx.quadraticCurveTo(240, 230, 290, 180);
+                ctx.lineTo(298, 186);
+                ctx.quadraticCurveTo(248, 238, 172, 308);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#00ffd2';
+                ctx.shadowColor = '#00ffbf';
+                ctx.shadowBlur = 10;
+                for (let i = 0; i < 4; i++) {
+                    const mx = 60 + i * 40;
+                    const my = 460 + Math.random() * 25;
+                    ctx.beginPath();
+                    ctx.arc(mx, my, 8, Math.PI, 0);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowBlur = 0;
+                    ctx.fillRect(mx - 2, my, 4, 12);
+                    ctx.fillStyle = '#00ffd2';
+                    ctx.shadowColor = '#00ffbf';
+                    ctx.shadowBlur = 10;
+                }
+
+                ctx.shadowBlur = 12;
+                for (let i = 0; i < 15; i++) {
+                    const fx = Math.random() * 512;
+                    const fy = Math.random() * 450;
+                    const fs = 2 + Math.random() * 3;
+                    ctx.fillStyle = Math.random() > 0.5 ? '#b5ff45' : '#45ffaf';
+                    ctx.shadowColor = ctx.fillStyle;
+                    ctx.beginPath();
+                    ctx.arc(fx, fy, fs, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
             return texture;
         }
 
@@ -3673,6 +4561,11 @@
                 // Idle purple cauldron fluid animation
                 cauldronFluid.position.y = (CAULDRON_HEIGHT - 0.05) + Math.sin(performance.now() * 0.002) * 0.005;
                 cauldron.userData.light.intensity = 8.0 + Math.sin(performance.now() * 0.004) * 2.0;
+            }
+
+            // Animate crystal ball soft glowing light pulse
+            if (crystalBallLight) {
+                crystalBallLight.intensity = 1.2 + Math.sin(performance.now() * 0.0035) * 0.35;
             }
 
             // 5. Smoothly interpolate cameraGroup scale and Y height (for Shrinking Spell)
