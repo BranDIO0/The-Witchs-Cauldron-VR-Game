@@ -1,0 +1,299 @@
+:root {
+    --primary-glow: #39ff14;
+    --secondary-glow: #8a2be2;
+    --dark-bg: #09060c;
+    --panel-bg: rgba(18, 12, 24, 0.7);
+    --border-glow: rgba(138, 43, 226, 0.4);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+}
+
+body {
+    background-color: var(--dark-bg);
+    color: #f0eae1;
+    font-family: 'Outfit', sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
+#canvas-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* Premium Glassmorphic Landing UI Overlay */
+#ui-overlay {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    z-index: 10;
+    width: 380px;
+    padding: 25px;
+    background: var(--panel-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-glow);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8), 
+                inset 0 0 15px rgba(138, 43, 226, 0.2);
+    transition: all 0.5s ease;
+}
+
+h1 {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.5rem;
+    line-height: 1.3;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, #e0b0ff, #8a2be2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 20px rgba(138, 43, 226, 0.3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.subtitle {
+    font-size: 0.85rem;
+    color: #bfa3d4;
+    margin-bottom: 20px;
+    line-height: 1.4;
+    border-bottom: 1px solid rgba(138, 43, 226, 0.2);
+    padding-bottom: 12px;
+}
+
+.section-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #e0b0ff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.controls-list {
+    list-style: none;
+    margin-bottom: 20px;
+    font-size: 0.85rem;
+}
+
+.controls-list li {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: flex-start;
+    line-height: 1.4;
+}
+
+.controls-list li::before {
+    content: "✦";
+    color: var(--secondary-glow);
+    margin-right: 8px;
+}
+
+.key-badge {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: #fff;
+    margin: 0 2px;
+}
+
+/* Call-to-action buttons for testing and WebXR initialization */
+.btn-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.action-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(138, 43, 226, 0.6), rgba(75, 0, 130, 0.8));
+    border: 1px solid rgba(186, 85, 211, 0.4);
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.action-btn:hover {
+    background: linear-gradient(135deg, rgba(138, 43, 226, 0.8), rgba(75, 0, 130, 1));
+    border-color: rgba(186, 85, 211, 0.7);
+    box-shadow: 0 0 15px rgba(138, 43, 226, 0.6);
+    transform: translateY(-2px);
+}
+
+.action-btn:active {
+    transform: translateY(1px);
+}
+
+.action-btn.secondary {
+    background: rgba(30, 20, 45, 0.8);
+    border: 1px solid rgba(138, 43, 226, 0.3);
+    color: #bfa3d4;
+}
+
+.action-btn.secondary:hover {
+    background: rgba(45, 30, 65, 0.9);
+    color: #fff;
+    border-color: rgba(138, 43, 226, 0.6);
+}
+
+/* VR Button container placement */
+#vr-button-container {
+    margin-top: 10px;
+    width: 100%;
+}
+
+/* Custom VR Button styling injected by Three.js override */
+#VRButton {
+    position: static !important;
+    width: 100% !important;
+    height: 48px !important;
+    padding: 12px !important;
+    background: linear-gradient(135deg, #7b1fa2, #4a148c) !important;
+    border: 1px solid #9c27b0 !important;
+    border-radius: 8px !important;
+    color: #ffffff !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    opacity: 1 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    box-shadow: 0 0 20px rgba(138, 43, 226, 0.5) !important;
+}
+
+#VRButton:hover {
+    background: linear-gradient(135deg, #9c27b0, #6a1b9a) !important;
+    box-shadow: 0 0 25px rgba(156, 39, 176, 0.8) !important;
+    transform: scale(1.02);
+}
+
+/* Recipe Status HUD overlay */
+#hud {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    z-index: 10;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 12px;
+    padding: 15px 25px;
+    backdrop-filter: blur(10px);
+    min-width: 250px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+.hud-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+}
+
+.hud-row:last-child {
+    margin-bottom: 0;
+    border-top: 1px solid rgba(138, 43, 226, 0.2);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+.hud-label {
+    color: #bfa3d4;
+}
+
+.hud-value {
+    font-weight: 600;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-missing {
+    background: rgba(255, 69, 0, 0.2);
+    color: #ff6347;
+    border: 1px solid rgba(255, 69, 0, 0.3);
+}
+
+.status-added {
+    background: rgba(138, 43, 226, 0.2);
+    color: #d8bfd8;
+    border: 1px solid rgba(138, 43, 226, 0.4);
+}
+
+.status-complete {
+    background: rgba(57, 255, 20, 0.2);
+    color: var(--primary-glow);
+    border: 1px solid rgba(57, 255, 20, 0.4);
+    text-shadow: 0 0 5px rgba(57, 255, 20, 0.5);
+    animation: pulse-glow 1.5s infinite alternate;
+}
+
+/* Tiny helper prompt at the top center of the screen */
+#hud-message {
+    position: absolute;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    background: rgba(9, 6, 12, 0.85);
+    border: 1px solid rgba(138, 43, 226, 0.6);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    color: #ffffff;
+    font-weight: 400;
+    pointer-events: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    transition: opacity 0.5s ease;
+    opacity: 0;
+    text-align: center;
+}
+
+@keyframes pulse-glow {
+    from { box-shadow: 0 0 5px rgba(57, 255, 20, 0.2); }
+    to { box-shadow: 0 0 15px rgba(57, 255, 20, 0.6); }
+}
+
+/* Responsive UI Adjustments */
+@media (max-height: 600px) {
+    #ui-overlay {
+        top: 15px;
+        left: 15px;
+        width: 320px;
+        padding: 15px;
+    }
+    .controls-list, .subtitle {
+        margin-bottom: 10px;
+    }
+}
