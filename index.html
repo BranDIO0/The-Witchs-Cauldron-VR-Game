@@ -433,6 +433,9 @@
         let particleSystem; // points emitter for active spell
         let particleData = []; // custom particle kinematics/spiral data
         let starfieldSystem; // points emitter for Cosmic Starfield state
+        let fireplaceLight;
+        let fireplaceParticles;
+        let fireplaceParticleData = [];
 
         // --- 4. Magic Tome Discovery State ---
         const discoveredPotions = {}; // Stores { "Item A + Item B": { discovered: false/true, potionName: String, ... } }
@@ -877,6 +880,910 @@
             tomePlane.rotation.copy(shelf.rotation);
             tomePlane.receiveShadow = true;
             lectern.add(tomePlane);
+
+            // Build the Cozy Cabin environment, including walls, fireplace, bookshelf, and reading corner
+            buildCabin();
+        }
+
+        // --- 3D Cozy Cabin Environment Architecture ---
+        function buildCabin() {
+            // Room dimensions: 7m wide, 7m deep, 3.2m high
+            const width = 7.0;
+            const depth = 7.0;
+            const height = 3.2;
+            const xCenter = 0;
+            const zCenter = -0.5; // Shift slightly forward to cover table/cauldron and player
+
+            const wallTexture = createProceduralWallTexture();
+            const wallMaterial = new THREE.MeshStandardMaterial({
+                map: wallTexture,
+                roughness: 0.95,
+                metalness: 0.05
+            });
+
+            const oakTexture = createProceduralOakTexture();
+            const beamMaterial = new THREE.MeshStandardMaterial({
+                map: oakTexture,
+                roughness: 0.85,
+                metalness: 0.1
+            });
+
+            // 1. Cozy Plaster Walls (cast/receive shadows)
+            const wallThickness = 0.1;
+            const wallsGroup = new THREE.Group();
+            wallsGroup.name = "CabinWalls";
+            scene.add(wallsGroup);
+
+            // Far Wall (Z = -4.0)
+            const farWall = new THREE.Mesh(new THREE.BoxGeometry(width, height, wallThickness), wallMaterial);
+            farWall.position.set(xCenter, height / 2, zCenter - depth / 2);
+            farWall.receiveShadow = true;
+            farWall.castShadow = true;
+            wallsGroup.add(farWall);
+
+            // Left Wall (X = -3.5)
+            const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, height, depth), wallMaterial);
+            leftWall.position.set(xCenter - width / 2, height / 2, zCenter);
+            leftWall.receiveShadow = true;
+            leftWall.castShadow = true;
+            wallsGroup.add(leftWall);
+
+            // Right Wall (X = 3.5)
+            const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, height, depth), wallMaterial);
+            rightWall.position.set(xCenter + width / 2, height / 2, zCenter);
+            rightWall.receiveShadow = true;
+            rightWall.castShadow = true;
+            wallsGroup.add(rightWall);
+
+            // Near Wall (Z = 3.0)
+            const nearWall = new THREE.Mesh(new THREE.BoxGeometry(width, height, wallThickness), wallMaterial);
+            nearWall.position.set(xCenter, height / 2, zCenter + depth / 2);
+            nearWall.receiveShadow = true;
+            nearWall.castShadow = true;
+            wallsGroup.add(nearWall);
+
+            // 2. Wooden Plank Ceiling
+            const ceilingMat = new THREE.MeshStandardMaterial({
+                map: createProceduralWoodTexture(),
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), ceilingMat);
+            ceiling.rotation.x = Math.PI / 2; // facing downwards
+            ceiling.position.set(xCenter, height - 0.01, zCenter);
+            ceiling.receiveShadow = true;
+            scene.add(ceiling);
+
+            // 3. Exposed Wooden Beams (Rafters) - Space across depth Z
+            const beamCount = 6;
+            const beamSpacing = depth / (beamCount - 1);
+            for (let i = 0; i < beamCount; i++) {
+                const zPos = (zCenter - depth / 2) + i * beamSpacing;
+                const beam = new THREE.Mesh(new THREE.BoxGeometry(width - 0.02, 0.18, 0.14), beamMaterial);
+                beam.position.set(xCenter, height - 0.09, zPos);
+                beam.castShadow = true;
+                beam.receiveShadow = true;
+                scene.add(beam);
+            }
+
+            // Vertical Support corner studs
+            const corners = [
+                [xCenter - width/2 + 0.06, zCenter - depth/2 + 0.06],
+                [xCenter + width/2 - 0.06, zCenter - depth/2 + 0.06],
+                [xCenter - width/2 + 0.06, zCenter + depth/2 - 0.06],
+                [xCenter + width/2 - 0.06, zCenter + depth/2 - 0.06]
+            ];
+            corners.forEach(pos => {
+                const cornerBeam = new THREE.Mesh(new THREE.BoxGeometry(0.14, height, 0.14), beamMaterial);
+                cornerBeam.position.set(pos[0], height / 2, pos[1]);
+                cornerBeam.castShadow = true;
+                cornerBeam.receiveShadow = true;
+                scene.add(cornerBeam);
+            });
+
+            // 4. Half-Timbering Framing Elements along walls for added geometric depth
+            // Bottom horizontal runner beams
+            for (let yVal of [0.08, height / 2, height - 0.08]) {
+                const horizStudLeft = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.08, depth - 0.14), beamMaterial);
+                horizStudLeft.position.set(xCenter - width / 2 + 0.025, yVal, zCenter);
+                horizStudLeft.castShadow = true;
+                horizStudLeft.receiveShadow = true;
+                scene.add(horizStudLeft);
+
+                const horizStudRight = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.08, depth - 0.14), beamMaterial);
+                horizStudRight.position.set(xCenter + width / 2 - 0.025, yVal, zCenter);
+                horizStudRight.castShadow = true;
+                horizStudRight.receiveShadow = true;
+                scene.add(horizStudRight);
+
+                const horizStudFar = new THREE.Mesh(new THREE.BoxGeometry(width - 0.14, 0.08, 0.03), beamMaterial);
+                horizStudFar.position.set(xCenter, yVal, zCenter - depth / 2 + 0.025);
+                horizStudFar.castShadow = true;
+                horizStudFar.receiveShadow = true;
+                scene.add(horizStudFar);
+            }
+
+            // Vertical wall struts (intermediate columns)
+            const studCount = 4;
+            const studSpacing = depth / (studCount - 1);
+            for (let i = 1; i < studCount - 1; i++) {
+                const zPos = (zCenter - depth / 2) + i * studSpacing;
+                
+                const leftStud = new THREE.Mesh(new THREE.BoxGeometry(0.03, height, 0.08), beamMaterial);
+                leftStud.position.set(xCenter - width / 2 + 0.025, height / 2, zPos);
+                leftStud.castShadow = true;
+                leftStud.receiveShadow = true;
+                scene.add(leftStud);
+
+                const rightStud = new THREE.Mesh(new THREE.BoxGeometry(0.03, height, 0.08), beamMaterial);
+                rightStud.position.set(xCenter + width / 2 - 0.025, height / 2, zPos);
+                rightStud.castShadow = true;
+                rightStud.receiveShadow = true;
+                scene.add(rightStud);
+            }
+
+            // 5. Build Cozy Window on the Far wall showing starry night
+            buildWindow(xCenter, height, zCenter, depth, beamMaterial);
+
+            // 6. Build fireplace on the left wall
+            buildFireplace(beamMaterial);
+
+            // 7. Build bookshelf on the right wall
+            buildBookshelf(beamMaterial);
+
+            // 8. Build reading corner in back-right area
+            buildReadingCorner(beamMaterial);
+        }
+
+        // --- Window Structure Constructor ---
+        function buildWindow(xCenter, height, zCenter, depth, beamMaterial) {
+            const winW = 1.4;
+            const winH = 1.4;
+            const winY = 1.6;
+            const winZ = zCenter - depth / 2; // -4.0
+
+            // A. Starry Night Backdrop Plane
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            const grad = ctx.createLinearGradient(0, 0, 0, 256);
+            grad.addColorStop(0, '#030206');
+            grad.addColorStop(0.5, '#0a0618');
+            grad.addColorStop(1, '#1c1033');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 256, 256);
+
+            ctx.fillStyle = '#ffffff';
+            for (let i = 0; i < 35; i++) {
+                const sx = Math.random() * 256;
+                const sy = Math.random() * 256;
+                const r = 0.5 + Math.random() * 0.8;
+                ctx.beginPath();
+                ctx.arc(sx, sy, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.fillStyle = '#fffce8';
+            ctx.shadowColor = '#ffeaa7';
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(60, 70, 22, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0; // reset
+
+            const backdropTexture = new THREE.CanvasTexture(canvas);
+            const backdropMat = new THREE.MeshBasicMaterial({
+                map: backdropTexture,
+                side: THREE.DoubleSide
+            });
+            const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(winW * 1.6, winH * 1.6), backdropMat);
+            backdrop.position.set(xCenter, winY, winZ - 0.06);
+            scene.add(backdrop);
+
+            // B. Window Glass Pane
+            const glassMat = new THREE.MeshStandardMaterial({
+                color: 0x90ccff,
+                transparent: true,
+                opacity: 0.12,
+                roughness: 0.1,
+                metalness: 0.95
+            });
+            const glass = new THREE.Mesh(new THREE.PlaneGeometry(winW, winH), glassMat);
+            glass.position.set(xCenter, winY, winZ - 0.015);
+            scene.add(glass);
+
+            // C. Heavy timber window frame border
+            const fT = 0.08;
+            const fD = 0.12;
+
+            const horizFrame = new THREE.BoxGeometry(winW + fT, fT, fD);
+            const frameTop = new THREE.Mesh(horizFrame, beamMaterial);
+            frameTop.position.set(xCenter, winY + winH / 2, winZ);
+            frameTop.castShadow = true;
+            frameTop.receiveShadow = true;
+            scene.add(frameTop);
+
+            const frameBottom = new THREE.Mesh(horizFrame, beamMaterial);
+            frameBottom.position.set(xCenter, winY - winH / 2, winZ);
+            frameBottom.castShadow = true;
+            frameBottom.receiveShadow = true;
+            scene.add(frameBottom);
+
+            const vertFrame = new THREE.BoxGeometry(fT, winH - fT, fD);
+            const frameLeft = new THREE.Mesh(vertFrame, beamMaterial);
+            frameLeft.position.set(xCenter - winW / 2, winY, winZ);
+            frameLeft.castShadow = true;
+            frameLeft.receiveShadow = true;
+            scene.add(frameLeft);
+
+            const frameRight = new THREE.Mesh(vertFrame, beamMaterial);
+            frameRight.position.set(xCenter + winW / 2, winY, winZ);
+            frameRight.castShadow = true;
+            frameRight.receiveShadow = true;
+            scene.add(frameRight);
+
+            // D. Window Grids Cross
+            const gridV = new THREE.Mesh(new THREE.BoxGeometry(0.02, winH, 0.03), beamMaterial);
+            gridV.position.set(xCenter, winY, winZ - 0.005);
+            gridV.castShadow = true;
+            scene.add(gridV);
+
+            const gridH = new THREE.Mesh(new THREE.BoxGeometry(winW, 0.02, 0.03), beamMaterial);
+            gridH.position.set(xCenter, winY, winZ - 0.005);
+            gridH.castShadow = true;
+            scene.add(gridH);
+        }
+
+        // --- Stone Fireplace Constructor ---
+        function buildFireplace(beamMaterial) {
+            const fpGroup = new THREE.Group();
+            fpGroup.position.set(-3.3, 0, -1.1); // Placed on Left Wall (X = -3.5)
+            fpGroup.rotation.y = Math.PI / 2;    // Face inwards (+X)
+            scene.add(fpGroup);
+
+            const stoneMat = new THREE.MeshStandardMaterial({
+                color: 0x3d3935, // Rustic charcoal grey
+                roughness: 0.9,
+                metalness: 0.05
+            });
+
+            const backMat = new THREE.MeshStandardMaterial({
+                color: 0x121212, // Smutty firebox backing
+                roughness: 0.95
+            });
+
+            // 1. Hearth Stone Platform
+            const hearthBase = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 0.8), stoneMat);
+            hearthBase.position.y = 0.04;
+            hearthBase.receiveShadow = true;
+            hearthBase.castShadow = true;
+            fpGroup.add(hearthBase);
+
+            // 2. Pillars left and right
+            const pillarL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.1, 0.55), stoneMat);
+            pillarL.position.set(-0.625, 0.59, 0.1);
+            pillarL.castShadow = true;
+            pillarL.receiveShadow = true;
+            fpGroup.add(pillarL);
+
+            const pillarR = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.1, 0.55), stoneMat);
+            pillarR.position.set(0.625, 0.59, 0.1);
+            pillarR.castShadow = true;
+            pillarR.receiveShadow = true;
+            fpGroup.add(pillarR);
+
+            // 3. Firebox recess back panel
+            const backWall = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.1, 0.08), backMat);
+            backWall.position.set(0, 0.59, -0.12);
+            backWall.receiveShadow = true;
+            fpGroup.add(backWall);
+
+            // 4. Heavy wood mantel board
+            const mantel = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.14, 0.65), beamMaterial);
+            mantel.position.set(0, 1.17, 0.1);
+            mantel.castShadow = true;
+            mantel.receiveShadow = true;
+            fpGroup.add(mantel);
+
+            // 5. Chimney breast going to rafters
+            const chimney = new THREE.Mesh(new THREE.BoxGeometry(1.15, 2.0, 0.45), stoneMat);
+            chimney.position.set(0, 2.19, 0.05);
+            chimney.castShadow = true;
+            chimney.receiveShadow = true;
+            fpGroup.add(chimney);
+
+            // 6. Glowing logs
+            const logMat = new THREE.MeshStandardMaterial({
+                color: 0x1f1208,
+                roughness: 0.95
+            });
+            const emberMat = new THREE.MeshStandardMaterial({
+                color: 0xff3c00,
+                emissive: 0xff3c00,
+                emissiveIntensity: 3.5,
+                roughness: 0.2
+            });
+
+            // Glowing hot coals stack
+            for (let i = 0; i < 6; i++) {
+                const coal = new THREE.Mesh(new THREE.SphereGeometry(0.02 + Math.random() * 0.02, 8, 8), emberMat);
+                coal.position.set(
+                    (Math.random() - 0.5) * 0.35,
+                    0.09,
+                    (Math.random() - 0.5) * 0.25
+                );
+                fpGroup.add(coal);
+            }
+
+            // Pile of logs crossing
+            const log1 = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.48, 8), logMat);
+            log1.rotation.z = Math.PI / 2 - 0.25;
+            log1.rotation.y = 0.2;
+            log1.position.set(-0.08, 0.14, 0.04);
+            log1.castShadow = true;
+            fpGroup.add(log1);
+
+            const log2 = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.48, 8), logMat);
+            log2.rotation.z = -Math.PI / 2 + 0.25;
+            log2.rotation.y = -0.2;
+            log2.position.set(0.08, 0.14, 0.01);
+            log2.castShadow = true;
+            fpGroup.add(log2);
+
+            const log3 = new THREE.Mesh(new THREE.CylinderGeometry(0.033, 0.033, 0.42, 8), logMat);
+            log3.rotation.x = Math.PI / 2;
+            log3.rotation.z = 0.15;
+            log3.position.set(0.0, 0.2, -0.01);
+            log3.castShadow = true;
+            fpGroup.add(log3);
+
+            // 7. Dynamic warm fireplace point light
+            fireplaceLight = new THREE.PointLight(0xff5000, 11.0, 9.0);
+            fireplaceLight.position.set(0, 0.3, 0.22);
+            fireplaceLight.castShadow = true;
+            fireplaceLight.shadow.mapSize.width = 1024;
+            fireplaceLight.shadow.mapSize.height = 1024;
+            fireplaceLight.shadow.bias = -0.002;
+            fpGroup.add(fireplaceLight);
+
+            // 8. Fire flame particle system
+            createFireplaceParticles(fpGroup);
+        }
+
+        // --- Fireplace Particles Emitter ---
+        function createFireplaceParticles(parentGroup) {
+            const count = 50;
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+
+            fireplaceParticleData = [];
+
+            for (let i = 0; i < count; i++) {
+                const x = (Math.random() - 0.5) * 0.38;
+                const y = 0.16 + Math.random() * 0.35;
+                const z = (Math.random() - 0.5) * 0.28;
+
+                positions.push(x, y, z);
+
+                fireplaceParticleData.push({
+                    x: x,
+                    y: y,
+                    z: z,
+                    speedY: 0.32 + Math.random() * 0.45,
+                    speedX: (Math.random() - 0.5) * 0.18,
+                    life: Math.random(),
+                    decay: 0.55 + Math.random() * 0.75
+                });
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 16;
+            canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+            grad.addColorStop(0, 'rgba(255, 210, 60, 1)');
+            grad.addColorStop(0.35, 'rgba(255, 60, 0, 0.85)');
+            grad.addColorStop(1, 'rgba(230, 0, 0, 0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 16, 16);
+
+            const texture = new THREE.CanvasTexture(canvas);
+
+            const material = new THREE.PointsMaterial({
+                size: 0.15,
+                map: texture,
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+
+            fireplaceParticles = new THREE.Points(geometry, material);
+            parentGroup.add(fireplaceParticles);
+        }
+
+        function updateFireplaceParticles(dt) {
+            if (!fireplaceParticles) return;
+
+            const pos = fireplaceParticles.geometry.attributes.position.array;
+
+            for (let i = 0; i < fireplaceParticleData.length; i++) {
+                const data = fireplaceParticleData[i];
+
+                data.life -= data.decay * dt;
+                data.y += data.speedY * dt;
+                data.x += data.speedX * dt;
+
+                // Respawn particle
+                if (data.life <= 0 || data.y > 0.85) {
+                    data.life = 1.0;
+                    data.y = 0.16 + Math.random() * 0.08;
+                    data.x = (Math.random() - 0.5) * 0.32;
+                    data.z = (Math.random() - 0.5) * 0.22;
+                    data.speedY = 0.35 + Math.random() * 0.45;
+                    data.speedX = (Math.random() - 0.5) * 0.14;
+                }
+
+                pos[i * 3] = data.x;
+                pos[i * 3 + 1] = data.y;
+                pos[i * 3 + 2] = data.z;
+            }
+
+            fireplaceParticles.geometry.attributes.position.needsUpdate = true;
+
+            // Animate dynamic fireplace lighting flicker
+            if (fireplaceLight) {
+                const noise = Math.sin(performance.now() * 0.018) * 1.6 + Math.sin(performance.now() * 0.0085) * 0.85;
+                fireplaceLight.intensity = 11.5 + noise;
+            }
+        }
+
+        // --- Wooden Bookshelf Constructor ---
+        function buildBookshelf(beamMaterial) {
+            const shelfGroup = new THREE.Group();
+            shelfGroup.position.set(3.3, 0, -1.0); // Placed on Right Wall (X = 3.5)
+            shelfGroup.rotation.y = -Math.PI / 2;  // Face inwards (-X)
+            scene.add(shelfGroup);
+
+            const woodMat = beamMaterial; // Oak
+            const backMat = new THREE.MeshStandardMaterial({
+                color: 0x251508, // Slightly darker oak backing
+                roughness: 0.95
+            });
+
+            const sW = 1.6;
+            const sH = 2.4;
+            const sD = 0.32;
+            const th = 0.05;
+
+            // Frame sides
+            const sideL = new THREE.Mesh(new THREE.BoxGeometry(th, sH, sD), woodMat);
+            sideL.position.set(-sW / 2 + th / 2, sH / 2, 0);
+            sideL.castShadow = true;
+            sideL.receiveShadow = true;
+            shelfGroup.add(sideL);
+
+            const sideR = new THREE.Mesh(new THREE.BoxGeometry(th, sH, sD), woodMat);
+            sideR.position.set(sW / 2 - th / 2, sH / 2, 0);
+            sideR.castShadow = true;
+            sideR.receiveShadow = true;
+            shelfGroup.add(sideR);
+
+            // Top board
+            const topBoard = new THREE.Mesh(new THREE.BoxGeometry(sW, th, sD), woodMat);
+            topBoard.position.set(0, sH - th / 2, 0);
+            topBoard.castShadow = true;
+            topBoard.receiveShadow = true;
+            shelfGroup.add(topBoard);
+
+            // Bottom heavy kick board
+            const bottomBoard = new THREE.Mesh(new THREE.BoxGeometry(sW, 0.12, sD), woodMat);
+            bottomBoard.position.set(0, 0.06, 0);
+            bottomBoard.castShadow = true;
+            bottomBoard.receiveShadow = true;
+            shelfGroup.add(bottomBoard);
+
+            // Thin back wall
+            const backPanel = new THREE.Mesh(new THREE.BoxGeometry(sW - th * 2, sH - th, 0.02), backMat);
+            backPanel.position.set(0, sH / 2 + 0.03, -sD / 2 + 0.01);
+            backPanel.receiveShadow = true;
+            shelfGroup.add(backPanel);
+
+            // Horizontal dividers
+            const levels = [0.6, 1.1, 1.6, 2.0];
+            levels.forEach(lvl => {
+                const divider = new THREE.Mesh(new THREE.BoxGeometry(sW - th * 2, 0.04, sD - 0.02), woodMat);
+                divider.position.set(0, lvl, 0);
+                divider.castShadow = true;
+                divider.receiveShadow = true;
+                shelfGroup.add(divider);
+            });
+
+            // Procedural book & vials stack
+            const spellbookColors = [
+                0x70001a, // Crimson
+                0x152c54, // Wizard Blue
+                0x183b2a, // Moss Green
+                0x473426, // Leather Brown
+                0xb39150, // Antique Gold
+                0xece2d0, // Ancient Parchment
+                0x612975  // Mystical Violet
+            ];
+
+            // Book builder
+            function spawnBook(x, y, z, height, width, depth, color, lean = 0) {
+                const bkGroup = new THREE.Group();
+                bkGroup.position.set(x, y, z);
+
+                const coverMat = new THREE.MeshStandardMaterial({
+                    color: color,
+                    roughness: 0.72,
+                    metalness: 0.15
+                });
+                const pageMat = new THREE.MeshStandardMaterial({
+                    color: 0xfaedd6,
+                    roughness: 0.9
+                });
+
+                const cover = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), coverMat);
+                cover.castShadow = true;
+                cover.receiveShadow = true;
+                bkGroup.add(cover);
+
+                // Page bunch showing on front/side
+                const pages = new THREE.Mesh(new THREE.BoxGeometry(width - 0.005, height - 0.012, depth - 0.01), pageMat);
+                pages.position.set(0.001, 0, 0.005);
+                bkGroup.add(pages);
+
+                if (lean !== 0) {
+                    bkGroup.rotation.z = lean;
+                }
+
+                shelfGroup.add(bkGroup);
+            }
+
+            // Flask builder
+            function spawnFlask(x, y, z, fluidColor) {
+                const flaskGroup = new THREE.Group();
+                flaskGroup.position.set(x, y, z);
+
+                const glassMat = new THREE.MeshStandardMaterial({
+                    color: 0xffffff,
+                    roughness: 0.15,
+                    metalness: 0.9,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const fluidMat = new THREE.MeshStandardMaterial({
+                    color: fluidColor,
+                    emissive: fluidColor,
+                    emissiveIntensity: 1.3,
+                    roughness: 0.15
+                });
+
+                const base = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.08, 12), glassMat);
+                base.castShadow = true;
+                flaskGroup.add(base);
+
+                const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.06, 8), glassMat);
+                neck.position.y = 0.07;
+                flaskGroup.add(neck);
+
+                const cork = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.016, 0.025, 8), new THREE.MeshStandardMaterial({ color: 0x8b5a2b }));
+                cork.position.y = 0.1;
+                flaskGroup.add(cork);
+
+                const fluid = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.048, 12), fluidMat);
+                fluid.position.y = -0.014;
+                flaskGroup.add(fluid);
+
+                shelfGroup.add(flaskGroup);
+            }
+
+            const yOffsets = [0.12, 0.62, 1.12, 1.62];
+            yOffsets.forEach((yBase, shelfIndex) => {
+                let xCur = -sW / 2 + 0.12;
+                const xEnd = sW / 2 - 0.12;
+
+                while (xCur < xEnd) {
+                    const roll = Math.random();
+
+                    if (roll < 0.68) {
+                        const count = 2 + Math.floor(Math.random() * 4);
+                        const canLean = Math.random() > 0.72;
+                        const lDir = Math.random() > 0.5 ? 1 : -1;
+
+                        for (let k = 0; k < count; k++) {
+                            if (xCur >= xEnd - 0.08) break;
+                            const w = 0.025 + Math.random() * 0.024;
+                            const h = 0.17 + Math.random() * 0.075;
+                            const d = 0.14 + Math.random() * 0.045;
+                            const color = spellbookColors[Math.floor(Math.random() * spellbookColors.length)];
+
+                            const lean = (canLean && k === count - 1) ? 0.24 * lDir : 0;
+                            const yOff = Math.cos(lean) * (h / 2) + 0.01;
+
+                            spawnBook(xCur + w/2, yBase + yOff, 0.02, h, w, d, color, lean);
+                            xCur += w + (lean !== 0 ? 0.065 : 0.005);
+                        }
+                    } else if (roll < 0.88) {
+                        const vials = 1 + Math.floor(Math.random() * 2);
+                        for (let k = 0; k < vials; k++) {
+                            if (xCur >= xEnd - 0.08) break;
+                            const color = spellbookColors[Math.floor(Math.random() * spellbookColors.length)];
+                            spawnFlask(xCur + 0.04, yBase + 0.04, 0.05, color);
+                            xCur += 0.12;
+                        }
+                    } else {
+                        xCur += 0.14 + Math.random() * 0.14;
+                    }
+                }
+            });
+        }
+
+        // --- Reading Corner Constructor ---
+        function buildReadingCorner(beamMaterial) {
+            const rcGroup = new THREE.Group();
+            rcGroup.position.set(2.0, 0, 1.8); // Placed in Back-Right corner
+            rcGroup.rotation.y = -Math.PI / 4;  // Angled towards player and cauldron
+            scene.add(rcGroup);
+
+            // 1. Circular Woven Fabric Rug
+            const rugGeo = new THREE.CircleGeometry(1.0, 32);
+            rugGeo.rotateX(-Math.PI / 2);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#661225'; // Vintage Burgundy
+            ctx.fillRect(0, 0, 256, 256);
+
+            ctx.strokeStyle = '#c59d4f'; // Antique gold ring
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(128, 128, 110, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#320b12'; // Blackish-red ring
+            ctx.lineWidth = 12;
+            ctx.beginPath();
+            ctx.arc(128, 128, 70, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#c59d4f';
+            ctx.beginPath();
+            ctx.arc(128, 128, 18, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Rug fringes along edge
+            ctx.strokeStyle = '#d7b57b';
+            ctx.lineWidth = 3;
+            for (let angle = 0; angle < Math.PI * 2; angle += 0.08) {
+                const rx = 128 + Math.cos(angle) * 122;
+                const ry = 128 + Math.sin(angle) * 122;
+                ctx.beginPath();
+                ctx.moveTo(rx, ry);
+                ctx.lineTo(rx + Math.cos(angle) * 6, ry + Math.sin(angle) * 6);
+                ctx.stroke();
+            }
+
+            const rugTexture = new THREE.CanvasTexture(canvas);
+            const rugMat = new THREE.MeshStandardMaterial({
+                map: rugTexture,
+                roughness: 0.95,
+                metalness: 0.05
+            });
+            const rug = new THREE.Mesh(rugGeo, rugMat);
+            rug.position.y = 0.004; // avoid floor z-fighting
+            rug.receiveShadow = true;
+            rcGroup.add(rug);
+
+            // 2. Wingback Armchair
+            const chair = new THREE.Group();
+            chair.position.set(-0.08, 0, 0.05);
+            rcGroup.add(chair);
+
+            const velvetMat = new THREE.MeshStandardMaterial({
+                color: 0x5a0a19, // Velvet crimson
+                roughness: 0.95,
+                metalness: 0.02
+            });
+
+            // Chair legs (slightly flared)
+            const legGeo = new THREE.CylinderGeometry(0.018, 0.014, 0.25, 8);
+            const legCoords = [
+                [-0.32, 0.125, -0.32],
+                [0.32, 0.125, -0.32],
+                [-0.32, 0.125, 0.32],
+                [0.32, 0.125, 0.32]
+            ];
+            legCoords.forEach(pos => {
+                const leg = new THREE.Mesh(legGeo, beamMaterial);
+                leg.position.set(pos[0], pos[1], pos[2]);
+                leg.castShadow = true;
+                chair.add(leg);
+            });
+
+            // Cushion seat
+            const seat = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.16, 0.72), velvetMat);
+            seat.position.y = 0.32;
+            seat.castShadow = true;
+            seat.receiveShadow = true;
+            chair.add(seat);
+
+            // Armrests left/right
+            const armL = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.44, 0.74), velvetMat);
+            armL.position.set(-0.36, 0.46, 0);
+            armL.castShadow = true;
+            armL.receiveShadow = true;
+            chair.add(armL);
+
+            const armR = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.44, 0.74), velvetMat);
+            armR.position.set(0.36, 0.46, 0);
+            armR.castShadow = true;
+            armR.receiveShadow = true;
+            chair.add(armR);
+
+            // Tall backing
+            const back = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.8, 0.15), velvetMat);
+            back.position.set(0, 0.72, -0.34);
+            back.rotation.x = -0.06;
+            back.castShadow = true;
+            back.receiveShadow = true;
+            chair.add(back);
+
+            // Wingback side ears (wings)
+            const wingGeo = new THREE.BoxGeometry(0.14, 0.34, 0.24);
+            
+            const earL = new THREE.Mesh(wingGeo, velvetMat);
+            earL.position.set(-0.32, 0.88, -0.22);
+            earL.rotation.y = 0.28;
+            earL.castShadow = true;
+            chair.add(earL);
+
+            const earR = new THREE.Mesh(wingGeo, velvetMat);
+            earR.position.set(0.32, 0.88, -0.22);
+            earR.rotation.y = -0.28;
+            earR.castShadow = true;
+            chair.add(earR);
+
+            // 3. Round Wooden Side Table
+            const table = new THREE.Group();
+            table.position.set(0.68, 0, -0.18);
+            rcGroup.add(table);
+
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.5, 8), beamMaterial);
+            post.position.y = 0.25;
+            post.castShadow = true;
+            table.add(post);
+
+            const tableBase = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.05, 12), beamMaterial);
+            tableBase.position.y = 0.025;
+            tableBase.castShadow = true;
+            table.add(tableBase);
+
+            const tableTop = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.04, 16), beamMaterial);
+            tableTop.position.y = 0.52;
+            tableTop.castShadow = true;
+            tableTop.receiveShadow = true;
+            table.add(tableTop);
+
+            // 4. Stack of books on side table
+            const bookColors = [0x152c54, 0x70001a, 0x473426];
+            const bkH = 0.032;
+            for (let i = 0; i < 3; i++) {
+                const book = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.16, bkH, 0.22),
+                    new THREE.MeshStandardMaterial({ color: bookColors[i], roughness: 0.78 })
+                );
+                book.position.set(
+                    (Math.random() - 0.5) * 0.02,
+                    0.54 + i * bkH,
+                    (Math.random() - 0.5) * 0.02
+                );
+                book.rotation.y = (Math.random() - 0.5) * 0.35;
+                book.castShadow = true;
+                book.receiveShadow = true;
+                table.add(book);
+            }
+
+            // 5. Candle emitting soft cozy light on side table
+            const candle = new THREE.Group();
+            candle.position.set(-0.08, 0.54 + 3 * bkH, 0.06);
+            table.add(candle);
+
+            const wax = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.018, 0.018, 0.075, 8),
+                new THREE.MeshStandardMaterial({ color: 0xfaedd6, roughness: 0.65 })
+            );
+            wax.position.y = 0.038;
+            wax.castShadow = true;
+            candle.add(wax);
+
+            const flame = new THREE.Mesh(
+                new THREE.ConeGeometry(0.008, 0.025, 8),
+                new THREE.MeshBasicMaterial({ color: 0xffa500 })
+            );
+            flame.position.y = 0.088;
+            candle.add(flame);
+
+            const candleLight = new THREE.PointLight(0xffaa44, 2.0, 3.2);
+            candleLight.position.set(0, 0.12, 0);
+            candleLight.castShadow = true;
+            candleLight.shadow.bias = -0.001;
+            candle.add(candleLight);
+        }
+
+        // --- Procedural Cozy Plaster Wall Texture ---
+        function createProceduralWallTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#eae2d6'; // Warm creamy plaster
+            ctx.fillRect(0, 0, 512, 512);
+
+            // Subtle plaster grain noise
+            for (let i = 0; i < 2400; i++) {
+                ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255, 255, 255, 0.35)' : 'rgba(145, 130, 115, 0.16)';
+                const sz = 1 + Math.random() * 2;
+                ctx.fillRect(Math.random() * 512, Math.random() * 512, sz, sz);
+            }
+
+            // Plaster cracks
+            ctx.strokeStyle = 'rgba(95, 85, 75, 0.12)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 4; i++) {
+                ctx.beginPath();
+                let x = Math.random() * 512;
+                let y = Math.random() * 512;
+                ctx.moveTo(x, y);
+                for (let j = 0; j < 6; j++) {
+                    x += (Math.random() - 0.5) * 45;
+                    y += (Math.random() - 0.5) * 45;
+                    ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(4, 2);
+            return texture;
+        }
+
+        // --- Procedural Cozy Oak Timber Texture ---
+        function createProceduralOakTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#3a2213'; // Dark aged oak brown
+            ctx.fillRect(0, 0, 256, 256);
+
+            // Grain and streaks
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+            for (let i = 0; i < 35; i++) {
+                ctx.fillRect(0, Math.random() * 256, 256, 1 + Math.random() * 4);
+            }
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+            for (let i = 0; i < 12; i++) {
+                ctx.fillRect(0, Math.random() * 256, 256, 1 + Math.random() * 2);
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            return texture;
         }
 
         // --- Spawn Ingredient Meshes with Procedural Details ---
@@ -2153,6 +3060,9 @@
             if (!renderer.xr.isPresenting) {
                 controls.update();
             }
+
+            // Update Fireplace particles and flickering warm light
+            updateFireplaceParticles(realDt);
 
             // 7. Output to display screen
             renderer.render(scene, camera);
