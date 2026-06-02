@@ -914,12 +914,44 @@
             wallsGroup.name = "CabinWalls";
             scene.add(wallsGroup);
 
-            // Far Wall (Z = -4.0)
-            const farWall = new THREE.Mesh(new THREE.BoxGeometry(width, height, wallThickness), wallMaterial);
-            farWall.position.set(xCenter, height / 2, zCenter - depth / 2);
-            farWall.receiveShadow = true;
-            farWall.castShadow = true;
-            wallsGroup.add(farWall);
+            // Far Wall with 1 centered window opening (Z = -4.0)
+            const wallH = height; // 3.2
+            const wallW = width;   // 7.0
+            const wallZ = zCenter - depth / 2; // -4.0
+            const bottomH = 0.95;
+            const topH = 0.95;
+            const midH = wallH - bottomH - topH; // 1.3m (the window height)
+
+            // A. Bottom Wall plate
+            const farWallBottom = new THREE.Mesh(new THREE.BoxGeometry(wallW, bottomH, wallThickness), wallMaterial);
+            farWallBottom.position.set(xCenter, bottomH / 2, wallZ);
+            farWallBottom.receiveShadow = true;
+            farWallBottom.castShadow = true;
+            wallsGroup.add(farWallBottom);
+
+            // B. Top Wall plate
+            const farWallTop = new THREE.Mesh(new THREE.BoxGeometry(wallW, topH, wallThickness), wallMaterial);
+            farWallTop.position.set(xCenter, wallH - topH / 2, wallZ);
+            farWallTop.receiveShadow = true;
+            farWallTop.castShadow = true;
+            wallsGroup.add(farWallTop);
+
+            // C. Middle Pillars flanking the centered window
+            // Left pillar (from x = -3.5 to -0.55)
+            const pillarWLeft = 2.95;
+            const farWallMidLeft = new THREE.Mesh(new THREE.BoxGeometry(pillarWLeft, midH, wallThickness), wallMaterial);
+            farWallMidLeft.position.set(xCenter - wallW / 2 + pillarWLeft / 2, bottomH + midH / 2, wallZ);
+            farWallMidLeft.receiveShadow = true;
+            farWallMidLeft.castShadow = true;
+            wallsGroup.add(farWallMidLeft);
+
+            // Right pillar (from x = 0.55 to 3.5)
+            const pillarWRight = 2.95;
+            const farWallMidRight = new THREE.Mesh(new THREE.BoxGeometry(pillarWRight, midH, wallThickness), wallMaterial);
+            farWallMidRight.position.set(xCenter + wallW / 2 - pillarWRight / 2, bottomH + midH / 2, wallZ);
+            farWallMidRight.receiveShadow = true;
+            farWallMidRight.castShadow = true;
+            wallsGroup.add(farWallMidRight);
 
             // Left Wall (X = -3.5)
             const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, height, depth), wallMaterial);
@@ -1022,8 +1054,8 @@
                 scene.add(rightStud);
             }
 
-            // 5. Build Cozy Window on the Far wall showing starry night
-            buildWindow(xCenter, height, zCenter, depth, beamMaterial);
+            // 5. Build One Cozy Centered Window on the Far wall showing starry night and forest silhouette
+            buildWindow(0, height, zCenter, depth, beamMaterial);
 
             // 6. Build fireplace on the left wall
             buildFireplace(beamMaterial);
@@ -1033,16 +1065,28 @@
 
             // 8. Build reading corner in back-right area
             buildReadingCorner(beamMaterial);
+
+            // 9. Build decorative door on the near wall (behind player start)
+            buildDoor(beamMaterial);
+
+            // 10. Build cozy bed in back-left area
+            buildBed(beamMaterial);
+
+            // 11. Build simple kitchen counter/shelf next to fireplace on left wall
+            buildKitchen(beamMaterial);
+
+            // 12. Build cozy decorative details (sleeping cat, broom, hanging herbs, sheepskin rug)
+            buildCozyDetails(beamMaterial);
         }
 
         // --- Window Structure Constructor ---
-        function buildWindow(xCenter, height, zCenter, depth, beamMaterial) {
-            const winW = 1.4;
-            const winH = 1.4;
+        function buildWindow(xOffset, height, zCenter, depth, beamMaterial) {
+            const winW = 1.1;
+            const winH = 1.3;
             const winY = 1.6;
             const winZ = zCenter - depth / 2; // -4.0
 
-            // A. Starry Night Backdrop Plane
+            // A. Starry Night & Forest Silhouette Backdrop Plane
             const canvas = document.createElement('canvas');
             canvas.width = 256;
             canvas.height = 256;
@@ -1051,27 +1095,70 @@
             const grad = ctx.createLinearGradient(0, 0, 0, 256);
             grad.addColorStop(0, '#030206');
             grad.addColorStop(0.5, '#0a0618');
-            grad.addColorStop(1, '#1c1033');
+            grad.addColorStop(0.9, '#1a1030');
+            grad.addColorStop(1, '#080512');
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, 256, 256);
 
+            // Stars
             ctx.fillStyle = '#ffffff';
-            for (let i = 0; i < 35; i++) {
+            for (let i = 0; i < 30; i++) {
                 const sx = Math.random() * 256;
                 const sy = Math.random() * 256;
-                const r = 0.5 + Math.random() * 0.8;
+                const r = 0.4 + Math.random() * 0.7;
                 ctx.beginPath();
                 ctx.arc(sx, sy, r, 0, Math.PI * 2);
                 ctx.fill();
             }
 
-            ctx.fillStyle = '#fffce8';
-            ctx.shadowColor = '#ffeaa7';
-            ctx.shadowBlur = 12;
+            // Moon
+            ctx.fillStyle = '#fffdec';
+            ctx.shadowColor = '#ffd085';
+            ctx.shadowBlur = 10;
             ctx.beginPath();
-            ctx.arc(60, 70, 22, 0, Math.PI * 2);
+            ctx.arc(70, 60, 20, 0, Math.PI * 2);
             ctx.fill();
             ctx.shadowBlur = 0; // reset
+
+            // Draw very subtle dark pine forest silhouette at the bottom (y = 256)
+            ctx.fillStyle = '#040208'; // extremely dark, almost black-indigo
+            ctx.beginPath();
+            ctx.moveTo(0, 256);
+            for (let px = 0; px <= 256; px += 16) {
+                const py = 236 + Math.sin(px * 0.05) * 5;
+                ctx.lineTo(px, py);
+            }
+            ctx.lineTo(256, 256);
+            ctx.closePath();
+            ctx.fill();
+
+            // Draw procedural pine trees overlapping along the horizon
+            for (let tx = -8; tx < 264; tx += 12) {
+                const treeH = 35 + Math.random() * 45; // tree height in pixels
+                const treeW = 10 + Math.random() * 8;  // tree width in pixels
+                
+                // Draw trunk
+                ctx.fillStyle = '#010103'; // darkest charcoal
+                ctx.fillRect(tx + treeW / 2 - 1, 236 - 6, 2, 6);
+                
+                // Draw pine foliage levels
+                ctx.fillStyle = '#030206'; // barely distinguishable green-black
+                const levels = 3;
+                const startY = 238;
+                
+                for (let l = 0; l < levels; l++) {
+                    const levelY = startY - 4 - l * (treeH / levels);
+                    const levelW = treeW * (1.0 - l * 0.22);
+                    const levelH = (treeH / levels) * 1.4;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(tx + treeW / 2 - levelW / 2, levelY);
+                    ctx.lineTo(tx + treeW / 2 + levelW / 2, levelY);
+                    ctx.lineTo(tx + treeW / 2, levelY - levelH);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
 
             const backdropTexture = new THREE.CanvasTexture(canvas);
             const backdropMat = new THREE.MeshBasicMaterial({
@@ -1079,7 +1166,7 @@
                 side: THREE.DoubleSide
             });
             const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(winW * 1.6, winH * 1.6), backdropMat);
-            backdrop.position.set(xCenter, winY, winZ - 0.06);
+            backdrop.position.set(xOffset, winY, winZ - 0.06);
             scene.add(backdrop);
 
             // B. Window Glass Pane
@@ -1091,7 +1178,7 @@
                 metalness: 0.95
             });
             const glass = new THREE.Mesh(new THREE.PlaneGeometry(winW, winH), glassMat);
-            glass.position.set(xCenter, winY, winZ - 0.015);
+            glass.position.set(xOffset, winY, winZ - 0.015);
             scene.add(glass);
 
             // C. Heavy timber window frame border
@@ -1100,38 +1187,38 @@
 
             const horizFrame = new THREE.BoxGeometry(winW + fT, fT, fD);
             const frameTop = new THREE.Mesh(horizFrame, beamMaterial);
-            frameTop.position.set(xCenter, winY + winH / 2, winZ);
+            frameTop.position.set(xOffset, winY + winH / 2, winZ);
             frameTop.castShadow = true;
             frameTop.receiveShadow = true;
             scene.add(frameTop);
 
             const frameBottom = new THREE.Mesh(horizFrame, beamMaterial);
-            frameBottom.position.set(xCenter, winY - winH / 2, winZ);
+            frameBottom.position.set(xOffset, winY - winH / 2, winZ);
             frameBottom.castShadow = true;
             frameBottom.receiveShadow = true;
             scene.add(frameBottom);
 
             const vertFrame = new THREE.BoxGeometry(fT, winH - fT, fD);
             const frameLeft = new THREE.Mesh(vertFrame, beamMaterial);
-            frameLeft.position.set(xCenter - winW / 2, winY, winZ);
+            frameLeft.position.set(xOffset - winW / 2, winY, winZ);
             frameLeft.castShadow = true;
             frameLeft.receiveShadow = true;
             scene.add(frameLeft);
 
             const frameRight = new THREE.Mesh(vertFrame, beamMaterial);
-            frameRight.position.set(xCenter + winW / 2, winY, winZ);
+            frameRight.position.set(xOffset + winW / 2, winY, winZ);
             frameRight.castShadow = true;
             frameRight.receiveShadow = true;
             scene.add(frameRight);
 
             // D. Window Grids Cross
             const gridV = new THREE.Mesh(new THREE.BoxGeometry(0.02, winH, 0.03), beamMaterial);
-            gridV.position.set(xCenter, winY, winZ - 0.005);
+            gridV.position.set(xOffset, winY, winZ - 0.005);
             gridV.castShadow = true;
             scene.add(gridV);
 
             const gridH = new THREE.Mesh(new THREE.BoxGeometry(winW, 0.02, 0.03), beamMaterial);
-            gridH.position.set(xCenter, winY, winZ - 0.005);
+            gridH.position.set(xOffset, winY, winZ - 0.005);
             gridH.castShadow = true;
             scene.add(gridH);
         }
@@ -1717,6 +1804,542 @@
             candleLight.castShadow = true;
             candleLight.shadow.bias = -0.001;
             candle.add(candleLight);
+        }
+
+        // --- Decorative Door Constructor ---
+        function buildDoor(beamMaterial) {
+            const doorGroup = new THREE.Group();
+            // Place it on the near wall (Z = 3.0), centered at X = 0, facing inwards (-Z)
+            doorGroup.position.set(0, 0, 2.95);
+            doorGroup.rotation.y = Math.PI; // face inwards (-Z)
+            scene.add(doorGroup);
+
+            // Door frame (dark wood rafters style)
+            const frameW = 1.15;
+            const frameH = 2.15;
+            const frameThickness = 0.08;
+            const frameDepth = 0.12;
+
+            const frameMat = beamMaterial;
+
+            // Frame vertical sides
+            const frameL = new THREE.Mesh(new THREE.BoxGeometry(frameThickness, frameH, frameDepth), frameMat);
+            frameL.position.set(-frameW / 2, frameH / 2, 0);
+            frameL.castShadow = true;
+            frameL.receiveShadow = true;
+            doorGroup.add(frameL);
+
+            const frameR = new THREE.Mesh(new THREE.BoxGeometry(frameThickness, frameH, frameDepth), frameMat);
+            frameR.position.set(frameW / 2, frameH / 2, 0);
+            frameR.castShadow = true;
+            frameR.receiveShadow = true;
+            doorGroup.add(frameR);
+
+            // Frame top horizontal board
+            const frameTop = new THREE.Mesh(new THREE.BoxGeometry(frameW + frameThickness, frameThickness, frameDepth), frameMat);
+            frameTop.position.set(0, frameH, 0);
+            frameTop.castShadow = true;
+            frameTop.receiveShadow = true;
+            doorGroup.add(frameTop);
+
+            // Door panel itself (textured wood planks)
+            const doorPlankMat = new THREE.MeshStandardMaterial({
+                color: 0x472814, // warm rustic oak
+                roughness: 0.9,
+                metalness: 0.05
+            });
+
+            const panelW = frameW - frameThickness;
+            const panelH = frameH - frameThickness / 2;
+            const panelD = 0.05;
+
+            const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(panelW, panelH, panelD), doorPlankMat);
+            doorPanel.position.set(0, panelH / 2, -0.01);
+            doorPanel.castShadow = true;
+            doorPanel.receiveShadow = true;
+            doorGroup.add(doorPanel);
+
+            // Vertical wooden plank divisions details
+            const lineMat = new THREE.MeshStandardMaterial({ color: 0x221208, roughness: 0.92 });
+            const plankCount = 5;
+            const plankSpacing = panelW / plankCount;
+            for (let i = 1; i < plankCount; i++) {
+                const plankLine = new THREE.Mesh(new THREE.BoxGeometry(0.008, panelH - 0.02, 0.008), lineMat);
+                plankLine.position.set(-panelW / 2 + i * plankSpacing, panelH / 2, 0.016);
+                doorGroup.add(plankLine);
+            }
+
+            // Diagonal Z-brace medieval frame
+            const braceMat = new THREE.MeshStandardMaterial({
+                color: 0x3d1f0f,
+                roughness: 0.9
+            });
+
+            // Top/bottom horizontal boards on the door panel
+            const boardTop = new THREE.Mesh(new THREE.BoxGeometry(panelW - 0.04, 0.16, 0.015), braceMat);
+            boardTop.position.set(0, panelH - 0.18, 0.018);
+            boardTop.castShadow = true;
+            doorGroup.add(boardTop);
+
+            const boardBottom = new THREE.Mesh(new THREE.BoxGeometry(panelW - 0.04, 0.16, 0.015), braceMat);
+            boardBottom.position.set(0, 0.18, 0.018);
+            boardBottom.castShadow = true;
+            doorGroup.add(boardBottom);
+
+            // Diagonal brace board
+            const boardDiag = new THREE.Mesh(new THREE.BoxGeometry(0.14, panelH - 0.5, 0.012), braceMat);
+            boardDiag.position.set(0, panelH / 2, 0.018);
+            boardDiag.rotation.z = -Math.PI / 4.6;
+            boardDiag.castShadow = true;
+            doorGroup.add(boardDiag);
+
+            // Iron strap hinges
+            const ironMat = new THREE.MeshStandardMaterial({
+                color: 0x1e1e1e,
+                roughness: 0.65,
+                metalness: 0.8
+            });
+
+            for (let yVal of [0.4, panelH - 0.4]) {
+                const hingeStrap = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.05, 0.008), ironMat);
+                hingeStrap.position.set(-panelW / 2 + 0.16, yVal, 0.028);
+                hingeStrap.castShadow = true;
+                doorGroup.add(hingeStrap);
+
+                const hingeBase = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.09, 0.01), ironMat);
+                hingeBase.position.set(-frameW / 2, yVal, 0.028);
+                hingeBase.castShadow = true;
+                doorGroup.add(hingeBase);
+            }
+
+        }
+
+        // --- Cozy Bed Constructor ---
+        function buildBed(beamMaterial) {
+            const bedGroup = new THREE.Group();
+            // Position in the back-left corner
+            bedGroup.position.set(-2.7, 0, 1.9);
+            scene.add(bedGroup);
+
+            const woodMat = beamMaterial;
+            const mattressMat = new THREE.MeshStandardMaterial({
+                color: 0xf4f1ea, // soft cream linen
+                roughness: 0.95
+            });
+            const blanketMat = new THREE.MeshStandardMaterial({
+                color: 0x1d3a2b, // cozy deep forest green velvet
+                roughness: 0.9,
+                metalness: 0.05
+            });
+            const pillowMat = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                roughness: 0.8
+            });
+
+            // 1. Bed Frame Corner Posts
+            const postGeo = new THREE.BoxGeometry(0.08, 0.5, 0.08);
+
+            const postFL = new THREE.Mesh(postGeo, woodMat);
+            postFL.position.set(-0.56, 0.25, -0.96);
+            postFL.castShadow = true;
+            bedGroup.add(postFL);
+
+            const postFR = new THREE.Mesh(postGeo, woodMat);
+            postFR.position.set(0.56, 0.25, -0.96);
+            postFR.castShadow = true;
+            bedGroup.add(postFR);
+
+            const postBL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.95, 0.08), woodMat);
+            postBL.position.set(-0.56, 0.475, 0.96);
+            postBL.castShadow = true;
+            bedGroup.add(postBL);
+
+            const postBR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.95, 0.08), woodMat);
+            postBR.position.set(0.56, 0.475, 0.96);
+            postBR.castShadow = true;
+            bedGroup.add(postBR);
+
+            // 2. Side Panels & Headboard
+            const sideL = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.3, 1.84), woodMat);
+            sideL.position.set(-0.56, 0.3, 0);
+            sideL.castShadow = true;
+            sideL.receiveShadow = true;
+            bedGroup.add(sideL);
+
+            const sideR = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.3, 1.84), woodMat);
+            sideR.position.set(0.56, 0.3, 0);
+            sideR.castShadow = true;
+            sideR.receiveShadow = true;
+            bedGroup.add(sideR);
+
+            const headboard = new THREE.Mesh(new THREE.BoxGeometry(1.04, 0.5, 0.04), woodMat);
+            headboard.position.set(0, 0.65, 0.96);
+            headboard.castShadow = true;
+            headboard.receiveShadow = true;
+            bedGroup.add(headboard);
+
+            const footboard = new THREE.Mesh(new THREE.BoxGeometry(1.04, 0.25, 0.04), woodMat);
+            footboard.position.set(0, 0.325, -0.96);
+            footboard.castShadow = true;
+            footboard.receiveShadow = true;
+            bedGroup.add(footboard);
+
+            // 3. Mattress
+            const mattress = new THREE.Mesh(new THREE.BoxGeometry(1.04, 0.25, 1.84), mattressMat);
+            mattress.position.set(0, 0.35, 0);
+            mattress.castShadow = true;
+            mattress.receiveShadow = true;
+            bedGroup.add(mattress);
+
+            // 4. Pillows
+            const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.35), pillowMat);
+            pillow.position.set(0, 0.49, 0.72);
+            pillow.rotation.x = -0.15; // slightly propped up
+            pillow.castShadow = true;
+            bedGroup.add(pillow);
+
+            // 5. Folded Quilt / Blanket
+            const blanket = new THREE.Mesh(new THREE.BoxGeometry(1.06, 0.1, 1.35), blanketMat);
+            blanket.position.set(0, 0.44, -0.25);
+            blanket.castShadow = true;
+            blanket.receiveShadow = true;
+            bedGroup.add(blanket);
+
+            const fold = new THREE.Mesh(new THREE.BoxGeometry(1.06, 0.14, 0.22), blanketMat);
+            fold.position.set(0, 0.47, 0.44);
+            fold.rotation.x = 0.15;
+            fold.castShadow = true;
+            bedGroup.add(fold);
+
+            // 6. Chest at the foot of the bed
+            const chest = new THREE.Group();
+            chest.position.set(0, 0, -1.35);
+            chest.rotation.y = Math.PI; // face towards center of cabin
+            bedGroup.add(chest);
+
+            const chestBody = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.42, 0.45), woodMat);
+            chestBody.position.y = 0.21;
+            chestBody.castShadow = true;
+            chestBody.receiveShadow = true;
+            chest.add(chestBody);
+
+            const ironMat = new THREE.MeshStandardMaterial({ color: 0x1f1f1f, metalness: 0.8, roughness: 0.5 });
+            for (let xOff of [-0.3, 0.3]) {
+                const band = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.43, 0.46), ironMat);
+                band.position.set(xOff, 0.21, 0);
+                chest.add(band);
+            }
+            const lock = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.012), ironMat);
+            lock.position.set(0, 0.32, 0.23);
+            chest.add(lock);
+        }
+
+        // --- Kitchen Constructor ---
+        function buildKitchen(beamMaterial) {
+            const kitGroup = new THREE.Group();
+            // Place along left wall next to the fireplace (X = -3.3, Z = -2.8)
+            kitGroup.position.set(-3.3, 0, -2.8);
+            kitGroup.rotation.y = Math.PI / 2; // face inwards (+X)
+            scene.add(kitGroup);
+
+            const woodMat = beamMaterial;
+            const counterTopMat = new THREE.MeshStandardMaterial({
+                color: 0x2b2b2b, // slate stone texture
+                roughness: 0.8,
+                metalness: 0.15
+            });
+
+            // 1. Counter base cabinet
+            const counterW = 1.35;
+            const counterH = 0.8;
+            const counterD = 0.55;
+
+            const base = new THREE.Mesh(new THREE.BoxGeometry(counterW, counterH, counterD), woodMat);
+            base.position.y = counterH / 2;
+            base.castShadow = true;
+            base.receiveShadow = true;
+            kitGroup.add(base);
+
+            // Countertop slab
+            const top = new THREE.Mesh(new THREE.BoxGeometry(counterW + 0.04, 0.06, counterD + 0.04), counterTopMat);
+            top.position.y = counterH + 0.03;
+            top.castShadow = true;
+            top.receiveShadow = true;
+            kitGroup.add(top);
+
+            // Cabinet doors panel details
+            const doorMat = new THREE.MeshStandardMaterial({ color: 0x221208, roughness: 0.92 });
+            const doorL = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.64, 0.01), doorMat);
+            doorL.position.set(-0.31, 0.38, counterD / 2 + 0.005);
+            doorL.castShadow = true;
+            kitGroup.add(doorL);
+
+            const doorR = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.64, 0.01), doorMat);
+            doorR.position.set(0.31, 0.38, counterD / 2 + 0.005);
+            doorR.castShadow = true;
+            kitGroup.add(doorR);
+
+            const metalMat = new THREE.MeshStandardMaterial({ color: 0x777777, metalness: 0.85, roughness: 0.2 });
+            const knobL = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 8), metalMat);
+            knobL.position.set(-0.08, 0.5, counterD / 2 + 0.016);
+            kitGroup.add(knobL);
+
+            const knobR = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 8), metalMat);
+            knobR.position.set(0.08, 0.5, counterD / 2 + 0.016);
+            kitGroup.add(knobR);
+
+            // 2. Kitchen shelf above counter (hanging on wall)
+            const shelf = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.03, 0.22), woodMat);
+            shelf.position.set(0, 1.7, -counterD / 2 + 0.12);
+            shelf.castShadow = true;
+            shelf.receiveShadow = true;
+            kitGroup.add(shelf);
+
+            // 3. Props on Countertop
+            // Terracotta mixing bowl
+            const clayMat = new THREE.MeshStandardMaterial({ color: 0xb56d45, roughness: 0.9 });
+            const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.07, 0.09, 12), clayMat);
+            bowl.position.set(-0.35, counterH + 0.1, 0.04);
+            bowl.castShadow = true;
+            kitGroup.add(bowl);
+
+            // Cutting board & knife
+            const board = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.018, 0.32), new THREE.MeshStandardMaterial({ color: 0xccaa7d, roughness: 0.85 }));
+            board.position.set(0.1, counterH + 0.07, 0.02);
+            board.rotation.y = 0.22;
+            board.castShadow = true;
+            kitGroup.add(board);
+
+            const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.08, 8), woodMat);
+            handle.position.set(0.1, counterH + 0.09, 0.16);
+            handle.rotation.x = Math.PI / 2;
+            handle.rotation.y = 0.22;
+            kitGroup.add(handle);
+
+            const blade = new THREE.Mesh(new THREE.BoxGeometry(0.002, 0.025, 0.18), metalMat);
+            blade.position.set(0.1, counterH + 0.095, 0.05);
+            blade.rotation.y = 0.22;
+            kitGroup.add(blade);
+
+            // Spice jars
+            const glassMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.4, roughness: 0.1, metalness: 0.9 });
+            const powderColors = [0xff4500, 0xffd700, 0x86e22f];
+            for (let i = 0; i < 3; i++) {
+                const jar = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.08, 8), glassMat);
+                jar.position.set(0.42 + i * 0.08, counterH + 0.1, -0.08);
+                jar.castShadow = true;
+                kitGroup.add(jar);
+
+                const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.015, 8), woodMat);
+                lid.position.set(0.42 + i * 0.08, counterH + 0.14, -0.08);
+                kitGroup.add(lid);
+
+                const powder = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.045, 8), new THREE.MeshStandardMaterial({ color: powderColors[i], roughness: 0.95 }));
+                powder.position.set(0.42 + i * 0.08, counterH + 0.08, -0.08);
+                kitGroup.add(powder);
+            }
+
+            // 4. Props on Wall Shelf
+            // Terracotta cups
+            for (let i = 0; i < 2; i++) {
+                const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.035, 0.075, 8), clayMat);
+                cup.position.set(-0.35 + i * 0.12, 1.76, -counterD / 2 + 0.12);
+                cup.castShadow = true;
+                kitGroup.add(cup);
+            }
+
+            // Ceramic plates stacked on shelf
+            const plateMat = new THREE.MeshStandardMaterial({ color: 0xfaf8f0, roughness: 0.45 });
+            for (let i = 0; i < 4; i++) {
+                const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.012, 12), plateMat);
+                plate.position.set(0.25, 1.72 + i * 0.015, -counterD / 2 + 0.12);
+                plate.castShadow = true;
+                kitGroup.add(plate);
+            }
+
+            // 5. Hanging pans/spoons on wall rack below shelf
+            const rack = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.02, 0.02), metalMat);
+            rack.position.set(0, 1.5, -counterD / 2 + 0.03);
+            kitGroup.add(rack);
+
+            for (let i = 0; i < 3; i++) {
+                const hangX = -0.25 + i * 0.25;
+                const hook = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.08, 8), metalMat);
+                hook.position.set(hangX, 1.44, -counterD / 2 + 0.03);
+                kitGroup.add(hook);
+
+                if (i === 1) {
+                    const panHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.18, 8), metalMat);
+                    panHandle.position.set(hangX, 1.34, -counterD / 2 + 0.03);
+                    kitGroup.add(panHandle);
+
+                    const pan = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.028, 12), new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.65 }));
+                    pan.rotation.x = Math.PI / 2;
+                    pan.position.set(hangX, 1.2, -counterD / 2 + 0.05);
+                    pan.castShadow = true;
+                    kitGroup.add(pan);
+                } else {
+                    const spoonHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.18, 8), metalMat);
+                    spoonHandle.position.set(hangX, 1.34, -counterD / 2 + 0.03);
+                    kitGroup.add(spoonHandle);
+
+                    const spoon = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 8), metalMat);
+                    spoon.position.set(hangX, 1.23, -counterD / 2 + 0.034);
+                    spoon.scale.set(1, 1.5, 0.5);
+                    kitGroup.add(spoon);
+                }
+            }
+        }
+
+        // --- Cozy Decorative Details Constructor ---
+        function buildCozyDetails(beamMaterial) {
+            // 1. Sleeping Black Cat Familiar (curled up on the bed chest)
+            const catGroup = new THREE.Group();
+            catGroup.position.set(-2.7, 0.425, 0.55); // on top of the bed chest
+            catGroup.rotation.y = Math.PI / 4.5;
+            scene.add(catGroup);
+
+            const catMat = new THREE.MeshStandardMaterial({
+                color: 0x181818, // matte black
+                roughness: 0.95
+            });
+
+            // Curl body
+            const body = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 12), catMat);
+            body.scale.set(1.3, 0.8, 1.0);
+            body.castShadow = true;
+            catGroup.add(body);
+
+            // Head
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.042, 10, 10), catMat);
+            head.position.set(0.065, 0.02, 0.03);
+            head.castShadow = true;
+            catGroup.add(head);
+
+            // Ears
+            const earL = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.025, 4), catMat);
+            earL.position.set(0.065, 0.058, 0.046);
+            earL.rotation.z = -0.2;
+            earL.rotation.y = 0.2;
+            catGroup.add(earL);
+
+            const earR = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.025, 4), catMat);
+            earR.position.set(0.046, 0.058, 0.016);
+            earR.rotation.z = -0.2;
+            earR.rotation.y = -0.2;
+            catGroup.add(earR);
+
+            // Curled tail
+            const tailGeo = new THREE.TorusGeometry(0.05, 0.012, 8, 16, Math.PI * 1.25);
+            const tail = new THREE.Mesh(tailGeo, catMat);
+            tail.position.set(-0.04, -0.016, 0.012);
+            tail.rotation.x = Math.PI / 2;
+            tail.rotation.y = 0.2;
+            tail.castShadow = true;
+            catGroup.add(tail);
+
+            // 2. Witch's Broom (Leaning against the wall next to the door)
+            const broomGroup = new THREE.Group();
+            broomGroup.position.set(0.72, 0.02, 2.86);
+            broomGroup.rotation.x = -0.15; // lean back
+            broomGroup.rotation.z = 0.08;  // lean side
+            scene.add(broomGroup);
+
+            const stickMat = new THREE.MeshStandardMaterial({ color: 0x5a3d28, roughness: 0.9 });
+            const strawMat = new THREE.MeshStandardMaterial({ color: 0xb59c5d, roughness: 0.95 });
+            const stringMat = new THREE.MeshStandardMaterial({ color: 0x3d2716, roughness: 0.9 });
+
+            const broomHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.45, 8), stickMat);
+            broomHandle.position.y = 0.725;
+            broomHandle.castShadow = true;
+            broomGroup.add(broomHandle);
+
+            const straw = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.38, 12), strawMat);
+            straw.position.y = 0.14;
+            straw.castShadow = true;
+            broomGroup.add(straw);
+
+            const tie = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.03, 8), stringMat);
+            tie.position.y = 0.28;
+            broomGroup.add(tie);
+
+            // 3. Hanging Dried Herb Bundles from Rafters
+            const herbColors = [
+                0x4d7c59, // Green sage
+                0x7b588c, // Purple lavender
+                0x9a4b59  // Burgundy dried rose
+            ];
+
+            function hangHerbs(x, z, color) {
+                const bundle = new THREE.Group();
+                bundle.position.set(x, 2.95, z); // hang below rafters
+                scene.add(bundle);
+
+                const stemMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9 });
+                const leafMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.95 });
+
+                const string = new THREE.Mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.12, 6), stemMat);
+                string.position.y = 0.06;
+                bundle.add(string);
+
+                const stems = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.15, 6), stemMat);
+                stems.position.y = -0.065;
+                bundle.add(stems);
+
+                for (let i = 0; i < 10; i++) {
+                    const cluster = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.015 + Math.random() * 0.015, 6, 6),
+                        leafMat
+                    );
+                    const radius = 0.04 * Math.random();
+                    const angle = Math.random() * Math.PI * 2;
+                    cluster.position.set(
+                        Math.cos(angle) * radius,
+                        -0.08 - Math.random() * 0.1,
+                        Math.sin(angle) * radius
+                    );
+                    cluster.castShadow = true;
+                    bundle.add(cluster);
+                }
+            }
+
+            hangHerbs(-1.5, -0.6, herbColors[0]); // Green Sage above Cauldron-Left
+            hangHerbs(1.8, 0.5, herbColors[1]);  // Purple Lavender near books/reading corner
+            hangHerbs(-0.8, 1.6, herbColors[2]);  // Burgundy rose near bed corner
+
+            // 4. Cozy fireplace sheepskin/faux-fur rug
+            const rugGeo = new THREE.CircleGeometry(0.7, 24);
+            rugGeo.scale(1.4, 0.9, 1.0); // stretch to make oval shape
+            rugGeo.rotateX(-Math.PI / 2);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#dfdcd5'; // Warm grey/cream faux fur
+            ctx.fillRect(0, 0, 128, 128);
+
+            ctx.strokeStyle = '#c5c2ba';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 300; i++) {
+                const rx = Math.random() * 128;
+                const ry = Math.random() * 128;
+                ctx.beginPath();
+                ctx.moveTo(rx, ry);
+                ctx.lineTo(rx + (Math.random() - 0.5) * 8, ry + (Math.random() - 0.5) * 8);
+                ctx.stroke();
+            }
+
+            const rugTexture = new THREE.CanvasTexture(canvas);
+            const rugMat = new THREE.MeshStandardMaterial({
+                map: rugTexture,
+                roughness: 0.98
+            });
+            const fireplaceRug = new THREE.Mesh(rugGeo, rugMat);
+            fireplaceRug.position.set(-2.1, 0.005, -1.1); // in front of fireplace
+            fireplaceRug.receiveShadow = true;
+            scene.add(fireplaceRug);
         }
 
         // --- Procedural Cozy Plaster Wall Texture ---
