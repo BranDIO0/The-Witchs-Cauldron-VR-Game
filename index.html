@@ -24,6 +24,8 @@
 </head>
 <body>
     <div id="canvas-container"></div>
+    <div id="love-filter"></div>
+    <div id="flash-overlay"></div>
 
     <!-- UI Overlay for Instructions and Simulation -->
     <div id="ui-overlay">
@@ -52,6 +54,7 @@
             <button class="action-btn" id="btn-drop-slime">🟢 Simulate Swamp Slime Drop (Green)</button>
             <button class="action-btn" id="btn-drop-ash">🔥 Simulate Phoenix Ash Drop (Orange)</button>
             <button class="action-btn" id="btn-drop-root">🪵 Simulate Mandrake Root Drop (Brown)</button>
+            <button class="action-btn" id="btn-drop-moonflower">🌸 Simulate Moonflower Drop (White)</button>
             <button class="action-btn secondary" id="btn-reset">↺ Reset Scene</button>
             <div id="vr-button-container"></div>
         </div>
@@ -83,6 +86,10 @@
         <div class="hud-row">
             <span class="hud-label">Mandrake Root (Brown):</span>
             <span class="hud-value status-badge status-missing" id="status-root">Missing</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">Moonflower (White):</span>
+            <span class="hud-value status-badge status-missing" id="status-moonflower">Missing</span>
         </div>
         <div class="hud-row">
             <span class="hud-label">Pot State:</span>

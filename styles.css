@@ -297,3 +297,40 @@ h1 {
         margin-bottom: 10px;
     }
 }
+
+/* Fullscreen Spell Effect Overlays */
+#love-filter {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle, rgba(255, 182, 193, 0.1) 0%, rgba(255, 20, 147, 0.35) 100%);
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 1.5s ease-in-out;
+}
+
+#love-filter::before {
+    content: "❤";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 20rem;
+    color: rgba(255, 105, 180, 0.04);
+    pointer-events: none;
+}
+
+#flash-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #fff;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0;
+}

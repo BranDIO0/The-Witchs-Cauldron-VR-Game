@@ -10,7 +10,7 @@ import { initVRControllers, initGrabInteraction, checkCauldronCollision, drawTel
 import { initDesktopInteractions, initSimulatorButtons } from './desktopControls.js';
 import { updatePhysics } from './physics.js';
 import { updateFireplaceParticles } from './cabin.js';
-import { updateAntigravityParticles, updateInfernoParticles, updateStarfieldParticles, updateSludgeParticles } from './spells.js';
+import { updateAntigravityParticles, updateInfernoParticles, updateStarfieldParticles, updateSludgeParticles, updateLoveParticles } from './spells.js';
 
 // Setup msgBanner and discoveryManager
 state.msgBanner = document.getElementById('hud-message');
@@ -132,6 +132,13 @@ function animate(timestamp, frame) {
             targetColor.setHex(0x8b5a2b);
             targetEmissive.setHex(0x3c2a1a);
             updateSludgeParticles(dt);
+        } else if (state.activeSpell === "LOVE_MIX") {
+            targetColor.setHex(0xff1493);
+            targetEmissive.setHex(0x4b0026);
+            updateLoveParticles(dt);
+        } else if (state.activeSpell === "EXPLOSION_MIX") {
+            targetColor.setHex(0x111111);
+            targetEmissive.setHex(0x000000);
         }
         
         state.fluidMaterial.color.lerpColors(new THREE.Color(0x4a0e80), targetColor, state.spellProgress);
@@ -164,6 +171,15 @@ function animate(timestamp, frame) {
     // 6. Orbit Controls Update for Desktop fallback
     if (!state.renderer.xr.isPresenting) {
         state.controls.update();
+    }
+
+    // 6.5. Apply Explosion Screen Shake
+    if (state.explosionShake > 0.01) {
+        state.explosionShake *= 0.92; // decay over time
+        const shakePower = state.explosionShake * 0.12;
+        state.camera.position.x += (Math.random() - 0.5) * shakePower;
+        state.camera.position.y += (Math.random() - 0.5) * shakePower;
+        state.camera.position.z += (Math.random() - 0.5) * shakePower;
     }
 
     // Update Fireplace particles

@@ -43,6 +43,7 @@ export const state = {
     targetCameraGroupScale: new THREE.Vector3(1, 1, 1),
     targetCameraGroupY: 0,
     spellProgress: 0, // for animating cauldron color transitions
+    explosionShake: 0, // for camera screen shake effect
 
     // Mesh References
     floor: null,
@@ -56,6 +57,8 @@ export const state = {
     swampSlime: null,
     phoenixAsh: null,
     mandrakeRoot: null,
+    moonflower: null,
+    magicTome: null,
     lectern: null,
     tomePlane: null,
     tomeCanvas: null,

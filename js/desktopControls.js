@@ -178,6 +178,17 @@ export function initSimulatorButtons() {
         state.controls.target.copy(state.CAULDRON_POS);
     });
 
+    // Drop Moonflower
+    document.getElementById('btn-drop-moonflower').addEventListener('click', () => {
+        if (state.moonflower.userData.inPot) return;
+
+        state.moonflower.position.set(state.CAULDRON_POS.x, state.CAULDRON_POS.y + state.CAULDRON_HEIGHT + 0.6, state.CAULDRON_POS.z);
+        state.moonflower.userData.velocity.set(0, -2, 0);
+        state.moonflower.userData.isGrabbed = false;
+        state.moonflower.userData.onTable = false;
+        state.controls.target.copy(state.CAULDRON_POS);
+    });
+
     // Reset simulation states
     document.getElementById('btn-reset').addEventListener('click', resetSimulation);
 }
@@ -190,15 +201,19 @@ export function resetSimulation() {
     state.targetCameraGroupY = 0;
     state.ingredientsInPot.length = 0;
 
-    // Reset all 6 ingredients
+    // Reset all ingredients
     state.ingredients.forEach(item => {
         item.visible = true;
         item.scale.set(1, 1, 1);
         item.position.copy(item.userData.initialPos);
+        if (item.userData.initialRot) {
+            item.rotation.copy(item.userData.initialRot);
+        } else {
+            item.rotation.set(0, 0, 0);
+        }
         item.userData.velocity.set(0, 0, 0);
         item.userData.inPot = false;
         item.userData.onTable = true;
-        item.rotation.set(0, 0, 0);
     });
 
     // Restore original materials if meshes are in wireframe mode
@@ -222,6 +237,16 @@ export function resetSimulation() {
     }
     state.scene.background = new THREE.Color(0x0e0813);
 
+    // Hide screen overlays
+    const loveFilter = document.getElementById('love-filter');
+    if (loveFilter) {
+        loveFilter.style.opacity = 0;
+    }
+    const flashOverlay = document.getElementById('flash-overlay');
+    if (flashOverlay) {
+        flashOverlay.style.opacity = 0;
+    }
+
     // Restore HUD values
     const badges = [
         { id: "status-toad", label: "Missing" },
@@ -229,7 +254,8 @@ export function resetSimulation() {
         { id: "status-wing", label: "Missing" },
         { id: "status-slime", label: "Missing" },
         { id: "status-ash", label: "Missing" },
-        { id: "status-root", label: "Missing" }
+        { id: "status-root", label: "Missing" },
+        { id: "status-moonflower", label: "Missing" }
     ];
     badges.forEach(b => {
         const el = document.getElementById(b.id);

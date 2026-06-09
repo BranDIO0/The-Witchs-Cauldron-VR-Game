@@ -194,7 +194,7 @@ export function buildEnvironment() {
     state.lectern = new THREE.Group();
     state.lectern.name = "Lectern";
     state.lectern.position.set(-0.9, 0, -1.0); // stand on the left side
-    state.lectern.rotation.y = Math.PI / 5; // angle towards player
+    state.lectern.rotation.y = Math.PI / 9; // angle towards player
     state.scene.add(state.lectern);
 
     const woodMat = new THREE.MeshStandardMaterial({
@@ -237,22 +237,6 @@ export function buildEnvironment() {
     updateTomeDisplay();
 
     state.tomeTexture = new THREE.CanvasTexture(state.tomeCanvas);
-    const tomeMat = new THREE.MeshStandardMaterial({
-        map: state.tomeTexture,
-        roughness: 0.95,
-        metalness: 0.0
-    });
-
-    // Plane geometry representing the open page layout
-    state.tomePlane = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.56), tomeMat);
-    state.tomePlane.name = "MagicTome"; // Exclude from Matrix wireframe traverse
-    
-    // Position flat against the slanted stand surface
-    const surfaceOffset = new THREE.Vector3(0, 0.02, 0.005).applyEuler(shelf.rotation);
-    state.tomePlane.position.copy(shelf.position).add(surfaceOffset);
-    state.tomePlane.rotation.copy(shelf.rotation);
-    state.tomePlane.receiveShadow = true;
-    state.lectern.add(state.tomePlane);
 
     // Build the Cozy Cabin environment, including walls, fireplace, bookshelf, and reading corner
     buildCabin();

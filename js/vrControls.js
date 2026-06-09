@@ -270,6 +270,7 @@ export function teleportPlayer(targetVector) {
 export function checkCauldronCollision() {
     state.ingredients.forEach(item => {
         if (item.userData.inPot || item.userData.isGrabbed) return;
+        if (item.name === "MagicTome") return;
 
         const cauldronTopY = state.CAULDRON_POS.y + state.CAULDRON_HEIGHT;
         
@@ -305,6 +306,7 @@ export function addIngredientToPot(ingredientName) {
     else if (ingredientName === "Swamp Slime") badgeId = "status-slime";
     else if (ingredientName === "Phoenix Ash") badgeId = "status-ash";
     else if (ingredientName === "Mandrake Root") badgeId = "status-root";
+    else if (ingredientName === "Moonflower") badgeId = "status-moonflower";
 
     if (badgeId) {
         const badge = document.getElementById(badgeId);

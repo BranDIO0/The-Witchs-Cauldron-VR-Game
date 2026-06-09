@@ -8,7 +8,8 @@ export class DiscoveryManager {
             "Bat Wing",
             "Swamp Slime",
             "Phoenix Ash",
-            "Mandrake Root"
+            "Mandrake Root",
+            "Moonflower"
         ];
         this.specialRecipes = [
             { pair: ["Toad Egg", "Fly Amanita"], name: "Antigravity State", effect: "ANTIGRAVITY", color: 0x39ff14 },
@@ -16,7 +17,9 @@ export class DiscoveryManager {
             { pair: ["Fly Amanita", "Bat Wing"], name: "Shrinking Spell State", effect: "SHRINKING", color: 0x00ffff },
             { pair: ["Toad Egg", "Swamp Slime"], name: "Inferno Vortex State", effect: "INFERNO_VORTEX", color: 0xff4500 },
             { pair: ["Phoenix Ash", "Mandrake Root"], name: "Cosmic Starfield State", effect: "COSMIC_STARFIELD", color: 0x000000 },
-            { pair: ["Mandrake Root", "Bat Wing"], name: "Wireframe Matrix Mode", effect: "WIREFRAME_MATRIX", color: 0x00ff00 }
+            { pair: ["Mandrake Root", "Bat Wing"], name: "Wireframe Matrix Mode", effect: "WIREFRAME_MATRIX", color: 0x00ff00 },
+            { pair: ["Moonflower", "Fly Amanita"], name: "Love Mix", effect: "LOVE_MIX", color: 0xff69b4 },
+            { pair: ["Moonflower", "Phoenix Ash"], name: "Explosion Mix", effect: "EXPLOSION_MIX", color: 0xff3300 }
         ];
         this.initDiscoveryState();
     }
@@ -110,50 +113,60 @@ export function drawTomeOnCanvas(canvas, ctx, tomeState) {
     ctx.lineTo(974, 75);
     ctx.stroke();
 
-    ctx.font = "17px Arial, sans-serif";
     const keys = Object.keys(tomeState);
-    let discoveredCount = 0;
+    const discoveredCount = Object.values(tomeState).filter(e => e.discovered).length;
+    const ySpacing = 33; // tighter spacing to fit 11 entries
 
-    // Draw left page entries (1-8)
+    // Draw left page entries (1-11)
     let yPos = 95;
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 11; i++) {
         if (i >= keys.length) break;
         const key = keys[i];
         const entry = tomeState[key];
         let text = "";
         if (entry.discovered) {
-            text = `${entry.itemA} + ${entry.itemB} = ${entry.potionName}`;
-            discoveredCount++;
-            ctx.fillStyle = "#228b22"; // Forest green for discovered
+            if (entry.effect === "SLUDGE") {
+                text = `${entry.itemA} + ${entry.itemB} = Sludge ✗`;
+                ctx.fillStyle = "#8b5a2b"; // rust brown
+            } else {
+                text = `${entry.itemA} + ${entry.itemB} = ${entry.potionName} ✓`;
+                ctx.fillStyle = "#1e824c"; // forest green
+            }
         } else {
             text = "?? + ?? = ???";
-            ctx.fillStyle = "#7a6e60"; // Muted grey
+            ctx.fillStyle = "#888888"; // standard grey
         }
+        ctx.font = "16px 'Outfit', Arial, sans-serif";
         ctx.fillText(`${i + 1}. ${text}`, 50, yPos);
-        yPos += 42;
+        yPos += ySpacing;
     }
 
-    // Draw right page entries (9-15)
+    // Draw right page entries (12-21)
     yPos = 95;
-    for (let i = 8; i < 15; i++) {
+    for (let i = 11; i < 21; i++) {
         if (i >= keys.length) break;
         const key = keys[i];
         const entry = tomeState[key];
         let text = "";
         if (entry.discovered) {
-            text = `${entry.itemA} + ${entry.itemB} = ${entry.potionName}`;
-            discoveredCount++;
-            ctx.fillStyle = "#228b22";
+            if (entry.effect === "SLUDGE") {
+                text = `${entry.itemA} + ${entry.itemB} = Sludge ✗`;
+                ctx.fillStyle = "#8b5a2b";
+            } else {
+                text = `${entry.itemA} + ${entry.itemB} = ${entry.potionName} ✓`;
+                ctx.fillStyle = "#1e824c";
+            }
         } else {
             text = "?? + ?? = ???";
-            ctx.fillStyle = "#7a6e60";
+            ctx.fillStyle = "#888888";
         }
+        ctx.font = "16px 'Outfit', Arial, sans-serif";
         ctx.fillText(`${i + 1}. ${text}`, 562, yPos);
-        yPos += 42;
+        yPos += ySpacing;
     }
 
     // Progress tracking
     ctx.fillStyle = "#5a3a1a";
     ctx.font = "bold 20px Georgia, serif";
-    ctx.fillText(`Unveiled: ${discoveredCount} / 15 Secrets`, 562, 435);
+    ctx.fillText(`Unveiled: ${discoveredCount} / 21 Combinations`, 562, 450);
 }

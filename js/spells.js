@@ -76,6 +76,12 @@ export function activateSpell(recipe) {
     state.targetCameraGroupScale.set(1, 1, 1);
     state.targetCameraGroupY = 0.0;
 
+    // Reset love filter overlay
+    const loveFilter = document.getElementById('love-filter');
+    if (loveFilter) {
+        loveFilter.style.opacity = 0;
+    }
+
     if (recipe.effect === "ANTIGRAVITY") {
         state.gravityActive = false;
         createAntigravityParticles();
@@ -104,6 +110,64 @@ export function activateSpell(recipe) {
         });
     } else if (recipe.effect === "SLUDGE") {
         createSludgeParticles();
+    } else if (recipe.effect === "LOVE_MIX") {
+        if (loveFilter) {
+            loveFilter.style.opacity = 1;
+        }
+        createLoveParticles();
+    } else if (recipe.effect === "EXPLOSION_MIX") {
+        // Trigger haptics
+        triggerHapticFeedback(600, 1.0);
+        
+        // Start screen shake
+        state.explosionShake = 1.0;
+
+        // Flash screen orange-red
+        const flash = document.getElementById('flash-overlay');
+        if (flash) {
+            flash.style.transition = 'none';
+            flash.style.backgroundColor = '#ff3300';
+            flash.style.opacity = 0.95;
+            setTimeout(() => {
+                flash.style.transition = 'opacity 1.2s ease-out';
+                flash.style.opacity = 0;
+            }, 60);
+        }
+
+        // Burnt fluid look
+        state.fluidMaterial.color.setHex(0x111111);
+        state.fluidMaterial.emissive.setHex(0x000000);
+        if (state.cauldron && state.cauldron.userData.light) {
+            state.cauldron.userData.light.intensity = 0.0;
+        }
+
+        // Explode ingredients
+        state.ingredients.forEach(item => {
+            item.visible = true;
+            item.scale.set(1, 1, 1);
+            item.position.copy(state.CAULDRON_POS).y += state.CAULDRON_HEIGHT + 0.1;
+            
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 2.5 + Math.random() * 3.5;
+            item.userData.velocity.set(
+                Math.cos(angle) * speed,
+                3.5 + Math.random() * 4.0,
+                Math.sin(angle) * speed
+            );
+            item.userData.inPot = false;
+            item.userData.onTable = false;
+        });
+        state.ingredientsInPot.length = 0;
+
+        // Clear HUD status badges
+        const badgeIds = ["status-toad", "status-mushroom", "status-wing", "status-slime", "status-ash", "status-root", "status-moonflower"];
+        badgeIds.forEach(id => {
+            const badge = document.getElementById(id);
+            if (badge) {
+                badge.innerText = "Missing";
+                badge.className = "hud-value status-badge status-missing";
+            }
+        });
     }
 }
 
@@ -397,6 +461,90 @@ export function updateSludgeParticles(dt) {
         if (posArr[i+1] > state.CAULDRON_POS.y + state.CAULDRON_HEIGHT + 1.2) {
             const angle = Math.random() * Math.PI * 2;
             const radius = Math.random() * state.CAULDRON_RADIUS * 0.7;
+            posArr[i] = state.CAULDRON_POS.x + Math.cos(angle) * radius;
+            posArr[i+1] = state.CAULDRON_POS.y + state.CAULDRON_HEIGHT - 0.02;
+            posArr[i+2] = state.CAULDRON_POS.z + Math.sin(angle) * radius;
+        }
+    }
+
+    state.particleSystem.geometry.attributes.position.needsUpdate = true;
+}
+
+export function drawHeart(ctx, x, y, width, height) {
+    ctx.beginPath();
+    const topCurveHeight = height * 0.3;
+    ctx.moveTo(x, y + topCurveHeight);
+    ctx.bezierCurveTo(x, y, x - width / 2, y, x - width / 2, y + topCurveHeight);
+    ctx.bezierCurveTo(x - width / 2, y + (height + topCurveHeight) / 2, x, y + (height + topCurveHeight) / 2, x, y + height);
+    ctx.bezierCurveTo(x, y + (height + topCurveHeight) / 2, x + width / 2, y + (height + topCurveHeight) / 2, x + width / 2, y + topCurveHeight);
+    ctx.bezierCurveTo(x + width / 2, y, x, y, x, y + topCurveHeight);
+    ctx.closePath();
+    ctx.fill();
+}
+
+export function createLoveParticles() {
+    const particleCount = 120;
+    const geometry = new THREE.BufferGeometry();
+    const positions = [];
+    const velocities = [];
+
+    for (let i = 0; i < particleCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.random() * (state.CAULDRON_RADIUS * 0.8);
+        const x = state.CAULDRON_POS.x + Math.cos(angle) * radius;
+        const y = state.CAULDRON_POS.y + state.CAULDRON_HEIGHT - 0.02;
+        const z = state.CAULDRON_POS.z + Math.sin(angle) * radius;
+
+        positions.push(x, y, z);
+        
+        velocities.push(
+            (Math.random() - 0.5) * 0.12, // vx
+            0.2 + Math.random() * 0.35,   // vy
+            (Math.random() - 0.5) * 0.12  // vz
+        );
+    }
+
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 32, 32);
+    ctx.fillStyle = 'rgba(255, 20, 147, 1.0)'; // hot pink
+    drawHeart(ctx, 16, 4, 20, 24);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+
+    const material = new THREE.PointsMaterial({
+        size: 0.15,
+        map: texture,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending
+    });
+
+    state.particleSystem = new THREE.Points(geometry, material);
+    state.scene.add(state.particleSystem);
+    state.particleSystem.userData = { velocities: velocities };
+}
+
+export function updateLoveParticles(dt) {
+    if (!state.particleSystem) return;
+
+    const posArr = state.particleSystem.geometry.attributes.position.array;
+    const vel = state.particleSystem.userData.velocities;
+    
+    for (let i = 0; i < posArr.length; i += 3) {
+        posArr[i] += vel[i] * dt;
+        posArr[i+1] += vel[i+1] * dt;
+        posArr[i+2] += vel[i+2] * dt;
+
+        posArr[i] += Math.sin(performance.now() * 0.004 + i) * 0.0015;
+
+        if (posArr[i+1] > 3.0) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * (state.CAULDRON_RADIUS * 0.8);
             posArr[i] = state.CAULDRON_POS.x + Math.cos(angle) * radius;
             posArr[i+1] = state.CAULDRON_POS.y + state.CAULDRON_HEIGHT - 0.02;
             posArr[i+2] = state.CAULDRON_POS.z + Math.sin(angle) * radius;

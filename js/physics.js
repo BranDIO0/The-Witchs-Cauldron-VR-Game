@@ -41,12 +41,64 @@ export function updatePhysics(dt) {
             const withinTableX = pos.x >= state.TABLE_POS.x - halfW && pos.x <= state.TABLE_POS.x + halfW;
             const withinTableZ = pos.z >= state.TABLE_POS.z - halfD && pos.z <= state.TABLE_POS.z + halfD;
 
+            // Kitchen Counter bounds
+            const withinKitchenX = pos.x >= -3.575 && pos.x <= -3.025;
+            const withinKitchenZ = pos.z >= -3.475 && pos.z <= -2.125;
+
+            // Sideboard Window bounds
+            const withinSideboardX = pos.x >= -0.9 && pos.x <= 0.9;
+            const withinSideboardZ = pos.z >= -3.95 && pos.z <= -3.57;
+
+            // Lectern shelf bounds
+            const withinLecternX = pos.x >= -1.275 && pos.x <= -0.525;
+            const withinLecternZ = pos.z >= -1.3 && pos.z <= -0.7;
+
+            // Reading Corner Side Table bounds
+            const distToSideTableXZ = Math.sqrt(
+                Math.pow(pos.x - 1.34, 2) +
+                Math.pow(pos.z - 1.56, 2)
+            );
+
             if (withinTableX && withinTableZ) {
                 const tableSurfaceY = tableTop + item.userData.radius - 0.05; // slight mesh anchor offset
-                
-                // If item is falling down and hits the table top
                 if (pos.y <= tableSurfaceY && vel.y < 0) {
                     pos.y = tableSurfaceY;
+                    vel.y = -vel.y * 0.3; // bounce
+                    vel.x *= 0.6; // friction damping
+                    vel.z *= 0.6;
+                    item.userData.onTable = true;
+                }
+            } else if (withinKitchenX && withinKitchenZ) {
+                const kitchenSurfaceY = 0.875 + item.userData.radius - 0.05;
+                if (pos.y <= kitchenSurfaceY && vel.y < 0) {
+                    pos.y = kitchenSurfaceY;
+                    vel.y = -vel.y * 0.3; // bounce
+                    vel.x *= 0.6; // friction damping
+                    vel.z *= 0.6;
+                    item.userData.onTable = true;
+                }
+            } else if (withinSideboardX && withinSideboardZ) {
+                const sideboardSurfaceY = 0.875 + item.userData.radius - 0.05;
+                if (pos.y <= sideboardSurfaceY && vel.y < 0) {
+                    pos.y = sideboardSurfaceY;
+                    vel.y = -vel.y * 0.3; // bounce
+                    vel.x *= 0.6; // friction damping
+                    vel.z *= 0.6;
+                    item.userData.onTable = true;
+                }
+            } else if (withinLecternX && withinLecternZ) {
+                const shelfSurfaceY = 1.05 + item.userData.radius - 0.05;
+                if (pos.y <= shelfSurfaceY && vel.y < 0) {
+                    pos.y = shelfSurfaceY;
+                    vel.y = -vel.y * 0.2; // less bounce
+                    vel.x *= 0.5;
+                    vel.z *= 0.5;
+                    item.userData.onTable = true;
+                }
+            } else if (distToSideTableXZ <= 0.28) {
+                const sideTableSurfaceY = 0.54 + item.userData.radius - 0.05;
+                if (pos.y <= sideTableSurfaceY && vel.y < 0) {
+                    pos.y = sideTableSurfaceY;
                     vel.y = -vel.y * 0.3; // bounce
                     vel.x *= 0.6; // friction damping
                     vel.z *= 0.6;
@@ -104,6 +156,25 @@ export function updatePhysics(dt) {
                 pos.x = item.userData.initialPos.x + (Math.random() - 0.5) * 0.2;
                 pos.z = item.userData.initialPos.z + (Math.random() - 0.5) * 0.2;
                 vel.set(0,0,0);
+            }
+        }
+
+        // Slow rotation reset when resting on surfaces
+        if (item.userData.onTable && !item.userData.isGrabbed && state.gravityActive) {
+            if (item.name === "MagicTome") {
+                const onLectern = pos.y > 0.95; // lectern height is 1.0
+                if (onLectern) {
+                    item.rotation.x = THREE.MathUtils.lerp(item.rotation.x, -Math.PI / 6, 8 * dt);
+                    item.rotation.y = THREE.MathUtils.lerp(item.rotation.y, Math.PI / 9, 8 * dt);
+                    item.rotation.z = THREE.MathUtils.lerp(item.rotation.z, 0, 8 * dt);
+                } else {
+                    item.rotation.x = THREE.MathUtils.lerp(item.rotation.x, 0, 8 * dt);
+                    item.rotation.y = THREE.MathUtils.lerp(item.rotation.y, 0, 8 * dt);
+                    item.rotation.z = THREE.MathUtils.lerp(item.rotation.z, 0, 8 * dt);
+                }
+            } else {
+                item.rotation.x = THREE.MathUtils.lerp(item.rotation.x, 0, 8 * dt);
+                item.rotation.z = THREE.MathUtils.lerp(item.rotation.z, 0, 8 * dt);
             }
         }
     });

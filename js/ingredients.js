@@ -67,13 +67,13 @@ export function spawnIngredients() {
 
     // Stylized Red Cylinder body
     const cylinderGeo = new THREE.CylinderGeometry(0.04, 0.05, 0.14, 16);
-    const cylinderMat = new THREE.MeshStandardMaterial({
-        color: 0xd90429, // Crimson Red
-        roughness: 0.4,
-        metalness: 0.1,
-        emissive: 0x550011,
-        emissiveIntensity: 0.3
-    });
+        const cylinderMat = new THREE.MeshStandardMaterial({
+            color: 0xd90429, // Crimson Red
+            roughness: 0.4,
+            metalness: 0.1,
+            emissive: 0xd90429,
+            emissiveIntensity: 0.8
+        });
     const mainBody = new THREE.Mesh(cylinderGeo, cylinderMat);
     mainBody.position.y = 0.07;
     mainBody.castShadow = true;
@@ -129,7 +129,9 @@ export function spawnIngredients() {
     const wingMat = new THREE.MeshStandardMaterial({
         color: 0x2b2b2b, // Dark grey
         roughness: 0.7,
-        metalness: 0.3
+        metalness: 0.3,
+        emissive: 0x4a0e80, // mystical deep purple
+        emissiveIntensity: 0.8
     });
     const wingMesh = new THREE.Mesh(wingGeo, wingMat);
     wingMesh.position.y = 0.05;
@@ -171,8 +173,8 @@ export function spawnIngredients() {
         metalness: 0.1,
         transparent: true,
         opacity: 0.85,
-        emissive: 0x145f08,
-        emissiveIntensity: 0.4
+        emissive: 0x39ff14,
+        emissiveIntensity: 0.8
     });
     const slimeMesh = new THREE.Mesh(slimeGeo, slimeMat);
     slimeMesh.position.y = 0.07;
@@ -219,7 +221,7 @@ export function spawnIngredients() {
         ashGroup.add(sat);
     }
 
-    ashGroup.position.set(1.6, state.TABLE_HEIGHT + 0.05, -1.0);
+    ashGroup.position.set(1.25, 0.58, 1.48);
     ashGroup.userData = {
         name: "Phoenix Ash",
         isGrabbed: false,
@@ -228,7 +230,7 @@ export function spawnIngredients() {
         radius: 0.07,
         onTable: true,
         inPot: false,
-        initialPos: new THREE.Vector3(1.6, state.TABLE_HEIGHT + 0.05, -1.0)
+        initialPos: new THREE.Vector3(1.25, 0.58, 1.48)
     };
     state.scene.add(ashGroup);
     state.ingredients.push(ashGroup);
@@ -241,7 +243,9 @@ export function spawnIngredients() {
     const rootMat = new THREE.MeshStandardMaterial({
         color: 0x5c4033, // Matte brown root color
         roughness: 0.95,
-        metalness: 0.05
+        metalness: 0.05,
+        emissive: 0xaa7c11, // amber/gold glow
+        emissiveIntensity: 0.6
     });
 
     const baseRoot = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.12, 10), rootMat);
@@ -262,7 +266,7 @@ export function spawnIngredients() {
     rightLeg.castShadow = true;
     rootGroup.add(rightLeg);
 
-    rootGroup.position.set(1.8, state.TABLE_HEIGHT, -1.0);
+    rootGroup.position.set(-3.3, 0.875, -2.4);
     rootGroup.userData = {
         name: "Mandrake Root",
         isGrabbed: false,
@@ -271,9 +275,136 @@ export function spawnIngredients() {
         radius: 0.07,
         onTable: true,
         inPot: false,
-        initialPos: new THREE.Vector3(1.8, state.TABLE_HEIGHT, -1.0)
+        initialPos: new THREE.Vector3(-3.3, 0.875, -2.4)
     };
     state.scene.add(rootGroup);
     state.ingredients.push(rootGroup);
     state.mandrakeRoot = rootGroup;
+
+    // G. Moonflower: Glowing white/blue flower with silver petals
+    const flowerGroup = new THREE.Group();
+    flowerGroup.name = "Moonflower";
+
+    // Stem: thin green cylinder
+    const stemGeo = new THREE.CylinderGeometry(0.006, 0.008, 0.12, 8);
+    const stemMat = new THREE.MeshStandardMaterial({
+        color: 0x2e5c36, // green stem
+        roughness: 0.8
+    });
+    const stem = new THREE.Mesh(stemGeo, stemMat);
+    stem.position.y = 0.06;
+    stem.castShadow = true;
+    flowerGroup.add(stem);
+
+    // Glowing core: glowing soft blue/white sphere
+    const coreGeo = new THREE.SphereGeometry(0.025, 12, 12);
+    const coreMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        emissive: 0x90ccff,
+        emissiveIntensity: 1.8,
+        roughness: 0.2
+    });
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    core.position.y = 0.12;
+    core.castShadow = true;
+    flowerGroup.add(core);
+
+    // Petals: small flat silver/blue ellipsoids
+    const petalGeo = new THREE.SphereGeometry(0.015, 8, 8);
+    petalGeo.scale(2.2, 0.4, 1.0); // flatten and stretch
+    const petalMat = new THREE.MeshStandardMaterial({
+        color: 0xe0e8f0, // silver/pale blue
+        roughness: 0.3,
+        metalness: 0.5,
+        emissive: 0x2b4c7e,
+        emissiveIntensity: 0.5
+    });
+
+    for (let i = 0; i < 5; i++) {
+        const petal = new THREE.Mesh(petalGeo, petalMat);
+        const angle = (i * Math.PI * 2) / 5;
+        petal.position.set(Math.cos(angle) * 0.02, 0.12, Math.sin(angle) * 0.02);
+        petal.rotation.y = -angle;
+        petal.rotation.z = 0.3; // tilt upwards
+        petal.castShadow = true;
+        flowerGroup.add(petal);
+    }
+
+    flowerGroup.position.set(-0.3, 0.9, -3.7);
+    flowerGroup.userData = {
+        name: "Moonflower",
+        isGrabbed: false,
+        grabbedBy: null,
+        velocity: new THREE.Vector3(0, 0, 0),
+        radius: 0.08,
+        onTable: true,
+        inPot: false,
+        initialPos: new THREE.Vector3(-0.3, 0.9, -3.7)
+    };
+    state.scene.add(flowerGroup);
+    state.ingredients.push(flowerGroup);
+    state.moonflower = flowerGroup;
+
+    // H. Magic Tome: 3D grabbable open book
+    const bookGroup = new THREE.Group();
+    bookGroup.name = "MagicTome";
+
+    const bookCoverMat = new THREE.MeshStandardMaterial({
+        color: 0x4a2a16, // leather brown
+        roughness: 0.8,
+        metalness: 0.1,
+        emissive: 0x221105, // very light self-glow for cover
+        emissiveIntensity: 0.5
+    });
+    const bookCover = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.03, 0.58), bookCoverMat);
+    bookCover.position.y = 0.015;
+    bookCover.castShadow = true;
+    bookCover.receiveShadow = true;
+    bookGroup.add(bookCover);
+
+    const bookPagesMat = new THREE.MeshStandardMaterial({
+        color: 0xfaedd6, // parchment
+        roughness: 0.9,
+        emissive: 0x3d3525, // self-glow
+        emissiveIntensity: 0.4
+    });
+    const pageBlock = new THREE.Mesh(new THREE.BoxGeometry(0.70, 0.024, 0.56), bookPagesMat);
+    pageBlock.position.y = 0.042;
+    pageBlock.castShadow = true;
+    pageBlock.receiveShadow = true;
+    bookGroup.add(pageBlock);
+
+    const bookTomeMat = new THREE.MeshStandardMaterial({
+        map: state.tomeTexture,
+        emissiveMap: state.tomeTexture, // make text glow!
+        emissive: new THREE.Color(0x777777), // glow intensity
+        roughness: 0.95,
+        metalness: 0.0
+    });
+    state.tomePlane = new THREE.Mesh(new THREE.PlaneGeometry(0.70, 0.56), bookTomeMat);
+    state.tomePlane.name = "MagicTome";
+    state.tomePlane.rotation.x = -Math.PI / 2;
+    state.tomePlane.position.y = 0.055;
+    state.tomePlane.receiveShadow = true;
+    bookGroup.add(state.tomePlane);
+
+    // Position it initially on the slanted stand shelf
+    bookGroup.position.set(-0.9, 1.03, -0.96);
+    bookGroup.rotation.set(-Math.PI / 6, Math.PI / 9, 0);
+
+    bookGroup.userData = {
+        name: "Magic Tome",
+        isGrabbed: false,
+        grabbedBy: null,
+        velocity: new THREE.Vector3(0, 0, 0),
+        radius: 0.28,
+        onTable: true,
+        inPot: false,
+        initialPos: new THREE.Vector3(-0.9, 1.03, -0.96),
+        initialRot: new THREE.Euler(-Math.PI / 6, Math.PI / 9, 0)
+    };
+
+    state.scene.add(bookGroup);
+    state.ingredients.push(bookGroup);
+    state.magicTome = bookGroup;
 }
