@@ -53,6 +53,7 @@ export function spawnIngredients() {
         grabbedBy: null,
         velocity: new THREE.Vector3(0, 0, 0),
         radius: 0.08,
+        bottomOffset: 0.08,
         onTable: true,
         inPot: false,
         initialPos: new THREE.Vector3(0.8, state.TABLE_HEIGHT + 0.08, -1.0)
@@ -97,6 +98,7 @@ export function spawnIngredients() {
         grabbedBy: null,
         velocity: new THREE.Vector3(0, 0, 0),
         radius: 0.07,
+        bottomOffset: 0.0,
         onTable: true,
         inPot: false,
         initialPos: new THREE.Vector3(1.0, state.TABLE_HEIGHT, -1.0)
@@ -145,6 +147,7 @@ export function spawnIngredients() {
         grabbedBy: null,
         velocity: new THREE.Vector3(0, 0, 0),
         radius: 0.08,
+        bottomOffset: 0.0,
         onTable: true,
         inPot: false,
         initialPos: new THREE.Vector3(1.2, state.TABLE_HEIGHT, -1.0)
@@ -181,16 +184,17 @@ export function spawnIngredients() {
     slimeMesh.castShadow = true;
     slimeGroup.add(slimeMesh);
 
-    slimeGroup.position.set(1.4, state.TABLE_HEIGHT, -1.0);
+    slimeGroup.position.set(-2.7, 0.48, 1.9);
     slimeGroup.userData = {
         name: "Swamp Slime",
         isGrabbed: false,
         grabbedBy: null,
         velocity: new THREE.Vector3(0, 0, 0),
         radius: 0.07,
+        bottomOffset: 0.0,
         onTable: true,
         inPot: false,
-        initialPos: new THREE.Vector3(1.4, state.TABLE_HEIGHT, -1.0)
+        initialPos: new THREE.Vector3(-2.7, 0.48, 1.9)
     };
     state.scene.add(slimeGroup);
     state.ingredients.push(slimeGroup);
@@ -221,16 +225,17 @@ export function spawnIngredients() {
         ashGroup.add(sat);
     }
 
-    ashGroup.position.set(1.25, 0.58, 1.48);
+    ashGroup.position.set(2.09, 0.44, 1.80);
     ashGroup.userData = {
         name: "Phoenix Ash",
         isGrabbed: false,
         grabbedBy: null,
         velocity: new THREE.Vector3(0, 0, 0),
         radius: 0.07,
+        bottomOffset: 0.04,
         onTable: true,
         inPot: false,
-        initialPos: new THREE.Vector3(1.25, 0.58, 1.48)
+        initialPos: new THREE.Vector3(2.09, 0.44, 1.80)
     };
     state.scene.add(ashGroup);
     state.ingredients.push(ashGroup);
@@ -273,6 +278,7 @@ export function spawnIngredients() {
         grabbedBy: null,
         velocity: new THREE.Vector3(0, 0, 0),
         radius: 0.07,
+        bottomOffset: 0.0,
         onTable: true,
         inPot: false,
         initialPos: new THREE.Vector3(-3.3, 0.875, -2.4)
@@ -330,16 +336,17 @@ export function spawnIngredients() {
         flowerGroup.add(petal);
     }
 
-    flowerGroup.position.set(-0.3, 0.9, -3.7);
+    flowerGroup.position.set(-0.3, 0.875, -3.7);
     flowerGroup.userData = {
         name: "Moonflower",
         isGrabbed: false,
         grabbedBy: null,
         velocity: new THREE.Vector3(0, 0, 0),
         radius: 0.08,
+        bottomOffset: 0.0,
         onTable: true,
         inPot: false,
-        initialPos: new THREE.Vector3(-0.3, 0.9, -3.7)
+        initialPos: new THREE.Vector3(-0.3, 0.875, -3.7)
     };
     state.scene.add(flowerGroup);
     state.ingredients.push(flowerGroup);
@@ -388,9 +395,9 @@ export function spawnIngredients() {
     state.tomePlane.receiveShadow = true;
     bookGroup.add(state.tomePlane);
 
-    // Position it initially on the slanted stand shelf
-    bookGroup.position.set(-0.9, 1.03, -0.96);
-    bookGroup.rotation.set(-Math.PI / 6, Math.PI / 9, 0);
+    // Position it initially flat on the main table next to the ingredients
+    bookGroup.position.set(1.68, state.TABLE_HEIGHT, -1.0);
+    bookGroup.rotation.set(0, 0, 0);
 
     bookGroup.userData = {
         name: "Magic Tome",
@@ -398,13 +405,140 @@ export function spawnIngredients() {
         grabbedBy: null,
         velocity: new THREE.Vector3(0, 0, 0),
         radius: 0.28,
+        bottomOffset: 0.0,
         onTable: true,
         inPot: false,
-        initialPos: new THREE.Vector3(-0.9, 1.03, -0.96),
-        initialRot: new THREE.Euler(-Math.PI / 6, Math.PI / 9, 0)
+        initialPos: new THREE.Vector3(1.68, state.TABLE_HEIGHT, -1.0),
+        initialRot: new THREE.Euler(0, 0, 0)
     };
 
     state.scene.add(bookGroup);
     state.ingredients.push(bookGroup);
     state.magicTome = bookGroup;
+
+    // Initialize particle emitters for all actual brewing ingredients (exclude Tome)
+    state.ingredients.forEach(item => {
+        if (item.userData.name !== "Magic Tome") {
+            createIngredientParticles(item);
+        }
+    });
 }
+
+function createIngredientParticles(group, particleCount = 15) {
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+    const particleData = [];
+
+    // Create a circular glowing canvas texture
+    const canvas = document.createElement('canvas');
+    canvas.width = 16;
+    canvas.height = 16;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.3, 'rgba(255,255,255,0.8)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 16, 16);
+    const texture = new THREE.CanvasTexture(canvas);
+
+    // Initialize particles locally within the group's coordinate frame
+    for (let i = 0; i < particleCount; i++) {
+        const life = Math.random(); // staggered starting life
+        const x = (Math.random() - 0.5) * 0.08;
+        const y = (group.userData.bottomOffset || 0) + Math.random() * 0.1;
+        const z = (Math.random() - 0.5) * 0.08;
+        
+        positions[i * 3] = x;
+        positions[i * 3 + 1] = y;
+        positions[i * 3 + 2] = z;
+
+        colors[i * 3] = life;
+        colors[i * 3 + 1] = life;
+        colors[i * 3 + 2] = life;
+
+        particleData.push({
+            x: x,
+            y: y,
+            z: z,
+            speedY: 0.08 + Math.random() * 0.12,
+            speedX: (Math.random() - 0.5) * 0.04,
+            speedZ: (Math.random() - 0.5) * 0.04,
+            life: life,
+            decay: 0.4 + Math.random() * 0.5
+        });
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+        size: 0.04,
+        map: texture,
+        vertexColors: true,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+
+    const particles = new THREE.Points(geometry, material);
+    group.add(particles);
+
+    group.userData.particleSystem = particles;
+    group.userData.particleData = particleData;
+}
+
+export function updateIngredientParticles(dt) {
+    state.ingredients.forEach(group => {
+        if (!group.userData.particleSystem || !group.userData.particleData) return;
+        
+        // Hide particles if the ingredient is inside the cauldron pot
+        if (group.userData.inPot) {
+            group.userData.particleSystem.visible = false;
+            return;
+        } else {
+            group.userData.particleSystem.visible = true;
+        }
+
+        const system = group.userData.particleSystem;
+        const positions = system.geometry.attributes.position.array;
+        const colors = system.geometry.attributes.color.array;
+        const dataList = group.userData.particleData;
+
+        for (let i = 0; i < dataList.length; i++) {
+            const data = dataList[i];
+            
+            data.life -= data.decay * dt;
+            data.y += data.speedY * dt;
+            data.x += data.speedX * dt;
+            data.z += data.speedZ * dt;
+
+            // Respawn if dead
+            if (data.life <= 0) {
+                data.life = 1.0;
+                data.x = (Math.random() - 0.5) * 0.08;
+                data.y = (group.userData.bottomOffset || 0) + Math.random() * 0.05;
+                data.z = (Math.random() - 0.5) * 0.08;
+                data.speedY = 0.08 + Math.random() * 0.12;
+                data.speedX = (Math.random() - 0.5) * 0.04;
+                data.speedZ = (Math.random() - 0.5) * 0.04;
+                data.decay = 0.4 + Math.random() * 0.5;
+            }
+
+            positions[i * 3] = data.x;
+            positions[i * 3 + 1] = data.y;
+            positions[i * 3 + 2] = data.z;
+
+            // Fade intensity based on remaining life
+            const intensity = Math.max(0, Math.min(1, data.life));
+            colors[i * 3] = intensity;
+            colors[i * 3 + 1] = intensity;
+            colors[i * 3 + 2] = intensity;
+        }
+
+        system.geometry.attributes.position.needsUpdate = true;
+        system.geometry.attributes.color.needsUpdate = true;
+    });
+}
+

@@ -189,44 +189,6 @@ export function buildEnvironment() {
     candle.add(flame);
     state.scene.add(candle);
 
-    // F. Lectern and Magic Tome
-    // Wooden Lectern pedestal next to cauldron
-    state.lectern = new THREE.Group();
-    state.lectern.name = "Lectern";
-    state.lectern.position.set(-0.9, 0, -1.0); // stand on the left side
-    state.lectern.rotation.y = Math.PI / 9; // angle towards player
-    state.scene.add(state.lectern);
-
-    const woodMat = new THREE.MeshStandardMaterial({
-        color: 0x5c4033, // dark wood brown
-        roughness: 0.9,
-        metalness: 0.05
-    });
-
-    // Pedestal base
-    const baseGeo = new THREE.BoxGeometry(0.35, 0.05, 0.35);
-    const base = new THREE.Mesh(baseGeo, woodMat);
-    base.position.y = 0.025;
-    base.castShadow = true;
-    state.lectern.add(base);
-
-    // Stand column
-    const colGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.85, 12);
-    const col = new THREE.Mesh(colGeo, woodMat);
-    col.position.y = 0.45;
-    col.castShadow = true;
-    col.receiveShadow = true;
-    state.lectern.add(col);
-
-    // Slanted book support plate
-    const shelfGeo = new THREE.BoxGeometry(0.75, 0.03, 0.6);
-    const shelf = new THREE.Mesh(shelfGeo, woodMat);
-    shelf.position.set(0, 1.0, 0); // slightly higher
-    shelf.rotation.x = -Math.PI / 6; // Angle it up towards the player's eyes (negative tilts towards player)
-    shelf.castShadow = true;
-    shelf.receiveShadow = true;
-    state.lectern.add(shelf);
-
     // Magic Tome Open Book UI Plane
     state.tomeCanvas = document.createElement('canvas');
     state.tomeCanvas.width = 1024;

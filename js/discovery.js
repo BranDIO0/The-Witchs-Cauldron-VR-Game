@@ -19,7 +19,8 @@ export class DiscoveryManager {
             { pair: ["Phoenix Ash", "Mandrake Root"], name: "Cosmic Starfield State", effect: "COSMIC_STARFIELD", color: 0x000000 },
             { pair: ["Mandrake Root", "Bat Wing"], name: "Wireframe Matrix Mode", effect: "WIREFRAME_MATRIX", color: 0x00ff00 },
             { pair: ["Moonflower", "Fly Amanita"], name: "Love Mix", effect: "LOVE_MIX", color: 0xff69b4 },
-            { pair: ["Moonflower", "Phoenix Ash"], name: "Explosion Mix", effect: "EXPLOSION_MIX", color: 0xff3300 }
+            { pair: ["Moonflower", "Phoenix Ash"], name: "Explosion Mix", effect: "EXPLOSION_MIX", color: 0xff3300 },
+            { pair: ["Mandrake Root", "Moonflower"], name: "Aether Beam Mix", effect: "AETHER_BEAM", color: 0xffffff }
         ];
         this.initDiscoveryState();
     }

@@ -59,12 +59,12 @@ export const state = {
     mandrakeRoot: null,
     moonflower: null,
     magicTome: null,
-    lectern: null,
     tomePlane: null,
     tomeCanvas: null,
     tomeCtx: null,
     tomeTexture: null,
     particleSystem: null, // points emitter for active spell
+    cauldronBeam: null, // mesh/group for Aether Beam Mix
     particleData: [], // custom particle kinematics/spiral data
     starfieldSystem: null, // points emitter for Cosmic Starfield state
     fireplaceLight: null,

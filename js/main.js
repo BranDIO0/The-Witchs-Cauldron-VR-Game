@@ -4,13 +4,13 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 import { state } from './state.js';
 import { buildEnvironment } from './environment.js';
-import { spawnIngredients } from './ingredients.js';
+import { spawnIngredients, updateIngredientParticles } from './ingredients.js';
 import { DiscoveryManager } from './discovery.js';
 import { initVRControllers, initGrabInteraction, checkCauldronCollision, drawTeleportArc, updateControllerVelocityTracker } from './vrControls.js';
 import { initDesktopInteractions, initSimulatorButtons } from './desktopControls.js';
 import { updatePhysics } from './physics.js';
 import { updateFireplaceParticles } from './cabin.js';
-import { updateAntigravityParticles, updateInfernoParticles, updateStarfieldParticles, updateSludgeParticles, updateLoveParticles } from './spells.js';
+import { updateAntigravityParticles, updateInfernoParticles, updateStarfieldParticles, updateSludgeParticles, updateLoveParticles, updateAetherBeam } from './spells.js';
 
 // Setup msgBanner and discoveryManager
 state.msgBanner = document.getElementById('hud-message');
@@ -139,6 +139,10 @@ function animate(timestamp, frame) {
         } else if (state.activeSpell === "EXPLOSION_MIX") {
             targetColor.setHex(0x111111);
             targetEmissive.setHex(0x000000);
+        } else if (state.activeSpell === "AETHER_BEAM") {
+            targetColor.setHex(0xffffff);
+            targetEmissive.setHex(0xaaaaaa);
+            updateAetherBeam(dt);
         }
         
         state.fluidMaterial.color.lerpColors(new THREE.Color(0x4a0e80), targetColor, state.spellProgress);
@@ -184,6 +188,9 @@ function animate(timestamp, frame) {
 
     // Update Fireplace particles
     updateFireplaceParticles(realDt);
+
+    // Update Ingredient white particles
+    updateIngredientParticles(dt);
 
     // 7. Output to display screen
     state.renderer.render(state.scene, state.camera);

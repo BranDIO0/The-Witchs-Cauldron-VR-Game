@@ -230,6 +230,12 @@ export function resetSimulation() {
         state.particleSystem = null;
     }
 
+    // Clean up active cauldron beam
+    if (state.cauldronBeam) {
+        state.scene.remove(state.cauldronBeam);
+        state.cauldronBeam = null;
+    }
+
     // Clean up cosmic space particles
     if (state.starfieldSystem) {
         state.scene.remove(state.starfieldSystem);

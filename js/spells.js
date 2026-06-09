@@ -52,6 +52,12 @@ export function activateSpell(recipe) {
         state.particleSystem = null;
     }
 
+    // Clean up active cauldron beam
+    if (state.cauldronBeam) {
+        state.scene.remove(state.cauldronBeam);
+        state.cauldronBeam = null;
+    }
+
     // Restore original materials if exiting wireframe matrix mode
     state.scene.traverse(child => {
         if (child.isMesh && child.userData.originalMaterial) {
@@ -134,7 +140,6 @@ export function activateSpell(recipe) {
             }, 60);
         }
 
-        // Burnt fluid look
         state.fluidMaterial.color.setHex(0x111111);
         state.fluidMaterial.emissive.setHex(0x000000);
         if (state.cauldron && state.cauldron.userData.light) {
@@ -168,6 +173,8 @@ export function activateSpell(recipe) {
                 badge.className = "hud-value status-badge status-missing";
             }
         });
+    } else if (recipe.effect === "AETHER_BEAM") {
+        createAetherBeam();
     }
 }
 
@@ -552,4 +559,163 @@ export function updateLoveParticles(dt) {
     }
 
     state.particleSystem.geometry.attributes.position.needsUpdate = true;
+}
+
+export function createAetherBeam() {
+    const beamGroup = new THREE.Group();
+    // Position it at the cauldron's center and at the fluid's surface height
+    beamGroup.position.set(state.CAULDRON_POS.x, state.CAULDRON_POS.y + state.CAULDRON_HEIGHT, state.CAULDRON_POS.z);
+
+    // 1. Inner core: bright white cylinder
+    const innerGeo = new THREE.CylinderGeometry(0.18, 0.18, 4.0, 16, 1, true);
+    const innerMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.0, // start faint, we will fade it in
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        depthWrite: false
+    });
+    const innerCylinder = new THREE.Mesh(innerGeo, innerMat);
+    innerCylinder.position.y = 2.0; // center of the 4m tall cylinder
+    beamGroup.add(innerCylinder);
+
+    // 2. Outer glow: cyan/blue cylinder
+    const outerGeo = new THREE.CylinderGeometry(0.24, 0.24, 4.0, 16, 1, true);
+    const outerMat = new THREE.MeshBasicMaterial({
+        color: 0x00d2ff,
+        transparent: true,
+        opacity: 0.0, // start faint, we will fade it in
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        depthWrite: false
+    });
+    const outerCylinder = new THREE.Mesh(outerGeo, outerMat);
+    outerCylinder.position.y = 2.0;
+    beamGroup.add(outerCylinder);
+
+    // 3. Point light to illuminate the room in white/cyan
+    const beamLight = new THREE.PointLight(0xffffff, 0.0, 6.0); // start at 0 intensity
+    beamLight.position.y = 2.0;
+    beamGroup.add(beamLight);
+
+    // 4. Particles rising up the beam
+    const particleCount = 80;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+    const velocities = [];
+
+    // Create a circular glowing canvas texture
+    const canvas = document.createElement('canvas');
+    canvas.width = 16;
+    canvas.height = 16;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.3, 'rgba(0,210,255,0.8)');
+    grad.addColorStop(1, 'rgba(0,210,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 16, 16);
+    const texture = new THREE.CanvasTexture(canvas);
+
+    for (let i = 0; i < particleCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.random() * 0.18;
+        const x = Math.cos(angle) * radius;
+        const y = Math.random() * 4.0;
+        const z = Math.sin(angle) * radius;
+
+        positions[i * 3] = x;
+        positions[i * 3 + 1] = y;
+        positions[i * 3 + 2] = z;
+
+        const t = 1.0 - (y / 4.0);
+        colors[i * 3] = t;
+        colors[i * 3 + 1] = t * 0.9 + 0.1;
+        colors[i * 3 + 2] = t;
+
+        velocities.push(
+            (Math.random() - 0.5) * 0.02, // vx
+            1.2 + Math.random() * 0.8,    // vy
+            (Math.random() - 0.5) * 0.02  // vz
+        );
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const pMaterial = new THREE.PointsMaterial({
+        size: 0.055,
+        map: texture,
+        vertexColors: true,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+
+    const particles = new THREE.Points(geometry, pMaterial);
+    beamGroup.add(particles);
+
+    state.scene.add(beamGroup);
+    state.cauldronBeam = beamGroup;
+
+    beamGroup.userData = {
+        inner: innerCylinder,
+        outer: outerCylinder,
+        light: beamLight,
+        particles: particles,
+        particleVelocities: velocities,
+        particleCount: particleCount,
+        age: 0
+    };
+}
+
+export function updateAetherBeam(dt) {
+    if (!state.cauldronBeam) return;
+
+    const beam = state.cauldronBeam;
+    const ud = beam.userData;
+
+    ud.age += dt;
+
+    const targetOpacityInner = 0.85 + Math.sin(performance.now() * 0.015) * 0.1;
+    const targetOpacityOuter = 0.45 + Math.cos(performance.now() * 0.012) * 0.08;
+    const targetLightIntensity = 18.0 + Math.sin(performance.now() * 0.01) * 3.0;
+
+    const progress = Math.min(ud.age * 1.2, 1.0);
+    ud.inner.material.opacity = THREE.MathUtils.lerp(0, targetOpacityInner, progress);
+    ud.outer.material.opacity = THREE.MathUtils.lerp(0, targetOpacityOuter, progress);
+    ud.light.intensity = THREE.MathUtils.lerp(0, targetLightIntensity, progress);
+
+    ud.inner.rotation.y += 0.25 * dt;
+    ud.outer.rotation.y -= 0.15 * dt;
+
+    const positions = ud.particles.geometry.attributes.position.array;
+    const colors = ud.particles.geometry.attributes.color.array;
+    const vels = ud.particleVelocities;
+
+    for (let i = 0; i < ud.particleCount; i++) {
+        positions[i * 3 + 1] += vels[i * 3 + 1] * dt;
+        positions[i * 3] += vels[i * 3] * dt;
+        positions[i * 3 + 2] += vels[i * 3 + 2] * dt;
+
+        if (positions[i * 3 + 1] > 4.0) {
+            positions[i * 3 + 1] = 0;
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * 0.18;
+            positions[i * 3] = Math.cos(angle) * radius;
+            positions[i * 3 + 2] = Math.sin(angle) * radius;
+        }
+
+        const y = positions[i * 3 + 1];
+        const t = Math.max(0, Math.min(1, 1.0 - (y / 4.0)));
+        const alpha = t * progress;
+        colors[i * 3] = alpha;
+        colors[i * 3 + 1] = alpha;
+        colors[i * 3 + 2] = alpha;
+    }
+
+    ud.particles.geometry.attributes.position.needsUpdate = true;
+    ud.particles.geometry.attributes.color.needsUpdate = true;
 }
