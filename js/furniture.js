@@ -499,6 +499,43 @@ export function buildBed(beamMaterial) {
     const lock = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.012), ironMat);
     lock.position.set(0, 0.32, 0.23);
     chest.add(lock);
+
+    // 7. Magical Floating/Flowing Candles for the Bed Corner
+    const candleLocations = [
+        [-3.2, 1.25, 2.6], // corner back-left
+        [-2.3, 1.45, 2.7]  // close to back wall
+    ];
+
+    candleLocations.forEach(loc => {
+        const floatingCandle = new THREE.Group();
+        floatingCandle.position.set(loc[0], loc[1], loc[2]);
+        state.scene.add(floatingCandle);
+
+        const waxMesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.015, 0.015, 0.08, 8),
+            new THREE.MeshStandardMaterial({ color: 0xfaedd6, roughness: 0.6 })
+        );
+        waxMesh.position.y = 0.04;
+        waxMesh.castShadow = true;
+        floatingCandle.add(waxMesh);
+
+        const flameMesh = new THREE.Mesh(
+            new THREE.ConeGeometry(0.007, 0.022, 8),
+            new THREE.MeshBasicMaterial({ color: 0xffaa00 })
+        );
+        flameMesh.position.y = 0.091;
+        floatingCandle.add(flameMesh);
+
+        // Add soft warm point light to illuminate the dark corner
+        const pLight = new THREE.PointLight(0xff9922, 1.8, 3.5);
+        pLight.position.set(0, 0.12, 0);
+        pLight.castShadow = true;
+        pLight.shadow.bias = -0.002;
+        floatingCandle.add(pLight);
+
+        // Register them as floating props so they move magically!
+        state.registerFloatingProp(floatingCandle, 0.15);
+    });
 }
 
 export function buildKitchen(beamMaterial) {

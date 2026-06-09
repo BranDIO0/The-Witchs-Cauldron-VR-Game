@@ -65,6 +65,7 @@ export const state = {
     tomeTexture: null,
     particleSystem: null, // points emitter for active spell
     cauldronBeam: null, // mesh/group for Aether Beam Mix
+    resetRune: null, // mesh/group for VR Reset Rune
     particleData: [], // custom particle kinematics/spiral data
     starfieldSystem: null, // points emitter for Cosmic Starfield state
     fireplaceLight: null,

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { state } from './state.js';
-import { showFlashMessage } from './spells.js';
+import { showFlashMessage, resetSimulation } from './spells.js';
 import { updateTomeDisplay } from './discovery.js';
 
 // --- Desktop testing helpers ---
@@ -16,6 +16,16 @@ export function onDesktopMouseDown(event) {
     updateMouseCoordinates(event);
 
     state.raycasterDesktop.setFromCamera(state.mousePosition, state.camera);
+
+    // Check if player clicked the 3D reset button on the table
+    if (state.resetRune) {
+        const resetIntersects = state.raycasterDesktop.intersectObject(state.resetRune, true);
+        if (resetIntersects.length > 0) {
+            resetSimulation();
+            return;
+        }
+    }
+
     const intersects = state.raycasterDesktop.intersectObjects(state.ingredients, true);
 
     if (intersects.length > 0) {
@@ -193,98 +203,3 @@ export function initSimulatorButtons() {
     document.getElementById('btn-reset').addEventListener('click', resetSimulation);
 }
 
-export function resetSimulation() {
-    state.activeSpell = null;
-    state.gravityActive = true;
-    state.timeScale = 1.0;
-    state.targetCameraGroupScale.set(1, 1, 1);
-    state.targetCameraGroupY = 0;
-    state.ingredientsInPot.length = 0;
-
-    // Reset all ingredients
-    state.ingredients.forEach(item => {
-        item.visible = true;
-        item.scale.set(1, 1, 1);
-        item.position.copy(item.userData.initialPos);
-        if (item.userData.initialRot) {
-            item.rotation.copy(item.userData.initialRot);
-        } else {
-            item.rotation.set(0, 0, 0);
-        }
-        item.userData.velocity.set(0, 0, 0);
-        item.userData.inPot = false;
-        item.userData.onTable = true;
-    });
-
-    // Restore original materials if meshes are in wireframe mode
-    state.scene.traverse(child => {
-        if (child.isMesh && child.userData.originalMaterial) {
-            child.material = child.userData.originalMaterial;
-            child.userData.originalMaterial = null;
-        }
-    });
-
-    // Clean up existing alchemical particles
-    if (state.particleSystem) {
-        state.scene.remove(state.particleSystem);
-        state.particleSystem = null;
-    }
-
-    // Clean up active cauldron beam
-    if (state.cauldronBeam) {
-        state.scene.remove(state.cauldronBeam);
-        state.cauldronBeam = null;
-    }
-
-    // Clean up cosmic space particles
-    if (state.starfieldSystem) {
-        state.scene.remove(state.starfieldSystem);
-        state.starfieldSystem = null;
-    }
-    state.scene.background = new THREE.Color(0x0e0813);
-
-    // Hide screen overlays
-    const loveFilter = document.getElementById('love-filter');
-    if (loveFilter) {
-        loveFilter.style.opacity = 0;
-    }
-    const flashOverlay = document.getElementById('flash-overlay');
-    if (flashOverlay) {
-        flashOverlay.style.opacity = 0;
-    }
-
-    // Restore HUD values
-    const badges = [
-        { id: "status-toad", label: "Missing" },
-        { id: "status-mushroom", label: "Missing" },
-        { id: "status-wing", label: "Missing" },
-        { id: "status-slime", label: "Missing" },
-        { id: "status-ash", label: "Missing" },
-        { id: "status-root", label: "Missing" },
-        { id: "status-moonflower", label: "Missing" }
-    ];
-    badges.forEach(b => {
-        const el = document.getElementById(b.id);
-        if (el) {
-            el.innerText = b.label;
-            el.className = "hud-value status-badge status-missing";
-        }
-    });
-
-    const cauldronHUD = document.getElementById("status-cauldron");
-    if (cauldronHUD) {
-        cauldronHUD.innerText = "Inactive";
-        cauldronHUD.className = "hud-value";
-        cauldronHUD.style.color = "#ff6347";
-    }
-
-    // Restore fluid color
-    state.fluidMaterial.color.setHex(0x4a0e80);
-    state.fluidMaterial.emissive.setHex(0x240046);
-    if (state.cauldron && state.cauldron.userData.light) {
-        state.cauldron.userData.light.color.setHex(0x7b2cbf);
-    }
-
-    showFlashMessage("Witch's Cauldron reset successfully.");
-    state.controls.target.set(0, 0.8, -1.2);
-}

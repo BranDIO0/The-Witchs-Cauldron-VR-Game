@@ -416,6 +416,40 @@ export function spawnIngredients() {
     state.ingredients.push(bookGroup);
     state.magicTome = bookGroup;
 
+    // A physical Reset Button placed on the table
+    const buttonGroup = new THREE.Group();
+    buttonGroup.name = "ResetButton";
+    
+    // 1. Stone/wooden base plate sitting on the table
+    const baseGeo = new THREE.CylinderGeometry(0.06, 0.07, 0.02, 16);
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x3a2f28, roughness: 0.8, metalness: 0.2 });
+    const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+    baseMesh.position.y = 0.01;
+    baseMesh.castShadow = true;
+    baseMesh.receiveShadow = true;
+    buttonGroup.add(baseMesh);
+
+    // 2. Glowing red button cap that is raised
+    const capGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.018, 16);
+    const capMat = new THREE.MeshStandardMaterial({
+        color: 0xff2200,
+        emissive: 0xbb0000,
+        emissiveIntensity: 1.8,
+        roughness: 0.2,
+        metalness: 0.1
+    });
+    const capMesh = new THREE.Mesh(capGeo, capMat);
+    capMesh.position.y = 0.025; // slightly raised above base
+    capMesh.castShadow = true;
+    buttonGroup.add(capMesh);
+
+    // Place the button on the left side of the table, near the cauldron
+    // Cauldron is at (0, 0, -1.1). Table height is state.TABLE_HEIGHT (0.8).
+    buttonGroup.position.set(0.7, state.TABLE_HEIGHT, -0.7);
+    
+    state.scene.add(buttonGroup);
+    state.resetRune = buttonGroup;
+
     // Initialize particle emitters for all actual brewing ingredients (exclude Tome)
     state.ingredients.forEach(item => {
         if (item.userData.name !== "Magic Tome") {
@@ -491,15 +525,41 @@ function createIngredientParticles(group, particleCount = 15) {
 
 export function updateIngredientParticles(dt) {
     state.ingredients.forEach(group => {
-        if (!group.userData.particleSystem || !group.userData.particleData) return;
-        
-        // Hide particles if the ingredient is inside the cauldron pot
+        // Handle sinking and fading out when in pot
         if (group.userData.inPot) {
-            group.userData.particleSystem.visible = false;
+            if (group.userData.sinkProgress === undefined) {
+                group.userData.sinkProgress = 0;
+            }
+            if (group.userData.sinkProgress >= 0) {
+                if (group.userData.sinkProgress === 0) {
+                    group.userData.sinkProgress = 0.01;
+                    group.userData.sinkStartScale = group.scale.clone();
+                }
+                group.userData.sinkProgress += dt * 1.25; // 0.8 seconds duration
+                const progress = Math.min(group.userData.sinkProgress, 1.0);
+                
+                if (group.userData.sinkStartScale) {
+                    group.scale.copy(group.userData.sinkStartScale).multiplyScalar(1.0 - progress);
+                }
+                group.position.y -= dt * 0.35; // sink down at 35cm/sec
+                
+                if (progress >= 1.0) {
+                    group.visible = false;
+                    group.userData.sinkProgress = -1; // finished sinking
+                }
+            }
+            
+            if (group.userData.particleSystem) {
+                group.userData.particleSystem.visible = false;
+            }
             return;
         } else {
-            group.userData.particleSystem.visible = true;
+            if (group.userData.particleSystem) {
+                group.userData.particleSystem.visible = true;
+            }
         }
+
+        if (!group.userData.particleSystem || !group.userData.particleData) return;
 
         const system = group.userData.particleSystem;
         const positions = system.geometry.attributes.position.array;

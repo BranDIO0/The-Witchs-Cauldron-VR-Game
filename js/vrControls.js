@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { state } from './state.js';
-import { showFlashMessage, activateSpell } from './spells.js';
+import { showFlashMessage, activateSpell, triggerHapticFeedback, resetSimulation } from './spells.js';
 import { updateTomeDisplay } from './discovery.js';
 
 // --- 1. VR Setup & Controller Initialization ---
@@ -155,8 +155,31 @@ export function getControllerVelocity(tracker) {
     return velocity;
 }
 
+export function checkResetRuneSelection(controller) {
+    if (!state.resetRune) return false;
+    const tempMatrix = new THREE.Matrix4();
+    tempMatrix.identity().extractRotation(controller.matrixWorld);
+    
+    const raycaster = new THREE.Raycaster();
+    raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+    raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix).normalize();
+    raycaster.far = 3.0; // allow comfortable distance to point and click from standing position!
+
+    const intersects = raycaster.intersectObject(state.resetRune, true);
+    return intersects.length > 0;
+}
+
 export function onSelectStart(event) {
     const controller = event.target;
+    
+    // Check if player triggered the Reset Rune in VR
+    if (checkResetRuneSelection(controller)) {
+        resetSimulation();
+        showFlashMessage("Cauldron Cleared!");
+        triggerHapticFeedback(150, 0.8);
+        return;
+    }
+
     const targetObject = checkGrabSelection(controller);
     if (targetObject && !targetObject.userData.inPot) {
         grabObject(controller, targetObject);
@@ -247,6 +270,9 @@ export function drawTeleportArc(controller) {
     arcLine.visible = true;
 
     if (hitPoint) {
+        // Clamp targeted teleport location inside the hut walls
+        hitPoint.x = THREE.MathUtils.clamp(hitPoint.x, -3.3, 3.3);
+        hitPoint.z = THREE.MathUtils.clamp(hitPoint.z, -3.8, 2.8);
         marker.position.copy(hitPoint).y += 0.01; 
         marker.visible = true;
     } else {
@@ -261,7 +287,13 @@ export function teleportPlayer(targetVector) {
     const cameraOffset = new THREE.Vector3();
     cameraOffset.subVectors(cameraWorldPos, state.cameraGroup.position);
     cameraOffset.y = 0;
-    state.cameraGroup.position.copy(targetVector).sub(cameraOffset);
+
+    // Clamp cameraGroup position inside the hut walls
+    const clampedTarget = targetVector.clone();
+    clampedTarget.x = THREE.MathUtils.clamp(clampedTarget.x, -3.3, 3.3);
+    clampedTarget.z = THREE.MathUtils.clamp(clampedTarget.z, -3.8, 2.8);
+
+    state.cameraGroup.position.copy(clampedTarget).sub(cameraOffset);
     
     showFlashMessage("Teleported!");
 }
@@ -296,7 +328,6 @@ export function addIngredientToPot(ingredientName) {
     if (item) {
         item.userData.inPot = true;
         item.userData.velocity.set(0, 0, 0);
-        fadeOutIngredientIntoLiquid(item);
     }
 
     let badgeId = "";
@@ -349,23 +380,4 @@ export function checkRecipe() {
     }
 }
 
-export function fadeOutIngredientIntoLiquid(mesh) {
-    const duration = 800; 
-    const startScale = mesh.scale.clone();
-    const startTime = performance.now();
-
-    function shrinkLoop() {
-        const elapsed = performance.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1.0);
-        
-        mesh.scale.copy(startScale).multiplyScalar(1.0 - progress);
-        mesh.position.y -= 0.003;
-
-        if (progress < 1.0) {
-            requestAnimationFrame(shrinkLoop);
-        } else {
-            mesh.visible = false; 
-        }
-    }
-    shrinkLoop();
-}
+// Legacy fadeOut removed, handled inside ingredients.js frame-rate independently
