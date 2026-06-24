@@ -1,10 +1,10 @@
-# 🧪 The Witch's Cauldron: Tome of Secrets WebXR Prototype
+# The Witch's Cauldron: Tome of Secrets WebXR Prototype
 
 An immersive WebXR VR prototype built on **Three.js** that transports the player into a cozy, atmospheric witch’s cabin. Step up to the glowing cauldron, combine mythical ingredients, and unlock ancient spells that alter the physics, environment, and visual matrix of the cabin.
 
 ---
 
-## 🌌 Technology Stack & Architecture
+## Technology Stack & Architecture
 
 - **Core Engine**: Three.js (WebGL 3D Library, v0.160.0)
 - **Platform**: WebXR Device API (via WebGLRenderer.xr)
@@ -14,7 +14,7 @@ An immersive WebXR VR prototype built on **Three.js** that transports the player
 
 ---
 
-## 🔮 Core Features & Mechanics
+## Core Features & Mechanics
 
 - **Cauldron Alchemy**: Toss ingredients into the cauldron. When exactly two unique ingredients are added, the Cauldron evaluates the combination.
 - **Magic Tome**: Discovered recipes are drawn in real-time onto an interactive, 3D parchment book resting on the sideboard.
@@ -23,7 +23,7 @@ An immersive WebXR VR prototype built on **Three.js** that transports the player
 
 ---
 
-## 🌿 Magical Ingredients
+## Magical Ingredients
 
 1. **Toad Egg** (Blue bumpy organic sphere)
 2. **Fly Amanita** (Red cylinder with white spots)
@@ -35,7 +35,7 @@ An immersive WebXR VR prototype built on **Three.js** that transports the player
 
 ---
 
-## 📜 The Spellbook (Special Recipes)
+## The Spellbook (Special Recipes)
 
 Combine two ingredients in the cauldron to unleash one of **9 special spells**:
 
@@ -55,23 +55,23 @@ Combine two ingredients in the cauldron to unleash one of **9 special spells**:
 
 ---
 
-## 🎮 Controls
+## Controls
 
-### 🕶️ VR Mode (WebXR Controllers)
+### VR Mode (WebXR Controllers)
 - **Navigate / Teleport**: Press and hold the **Squeeze Button** on either controller to cast a green parabolic arc. Aim it at the floor, and release to teleport.
 - **Grab Ingredients**: Point your controller ray at any ingredient and press the **Trigger Button**.
 - **Throw Ingredients**: Release the **Trigger Button** while moving your arm to toss the ingredient into the cauldron.
 - **Reset Cauldron**: Aim your laser pointer at the glowing **Reset Rune** on the wall and press the **Trigger**.
 - **Witch Hands**: Responsive, procedurally generated **witch-green hands** are attached to your controllers. The fingers automatically curl into a grabbing fist when pressing the trigger.
 
-### 💻 Desktop Simulation Fallback
+### Desktop Simulation Fallback
 - **Look Around**: Click and drag your mouse.
 - **Pan / Zoom**: Use Right-click drag or the Scroll wheel.
 - **Interact**: Use the **Direct Simulation Commands** panel in the HUD to simulate ingredient drops and reset the scene with single clicks.
 
 ---
 
-## ⚙️ Running Locally
+## Running Locally
 
 Since WebXR and modules require secure contexts, run the project using a local development server:
 
