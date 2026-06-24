@@ -17,6 +17,34 @@ export function initVRControllers() {
         controller.addEventListener('squeezestart', onSqueezeStart);
         controller.addEventListener('squeezeend', onSqueezeEnd);
 
+        // Setup connected/disconnected event listeners to add/remove procedural witch hands
+        controller.addEventListener('connected', (event) => {
+            const inputSource = event.data;
+            if (inputSource.targetRayMode === 'tracked-pointer') {
+                const handedness = inputSource.handedness || 'right';
+                // Remove existing if any
+                if (controller.userData.handMesh) {
+                    controller.remove(controller.userData.handMesh);
+                }
+                const hand = createHandMesh(handedness);
+                controller.add(hand.mesh);
+                controller.userData.handMesh = hand.mesh;
+                controller.userData.handPivots = hand.pivots;
+                controller.userData.thumbPivot = hand.thumbPivot;
+                controller.userData.handedness = handedness;
+                controller.userData.isGrabbing = false;
+            }
+        });
+
+        controller.addEventListener('disconnected', () => {
+            if (controller.userData.handMesh) {
+                controller.remove(controller.userData.handMesh);
+                controller.userData.handMesh = null;
+                controller.userData.handPivots = null;
+                controller.userData.thumbPivot = null;
+            }
+        });
+
         state.cameraGroup.add(controller);
         state.controllers.push(controller);
 
@@ -90,6 +118,7 @@ export function grabObject(controller, object) {
         const prevController = object.userData.grabbedBy;
         if (prevController) {
             releaseObject(prevController, object, false); // force quiet release
+            prevController.userData.isGrabbing = false; // Reset the other hand's visual state
         }
     }
 
@@ -98,6 +127,7 @@ export function grabObject(controller, object) {
     object.userData.velocity.set(0, 0, 0); // clear velocities
 
     controller.attach(object);
+    controller.userData.isGrabbing = true; // Visual grab trigger
 
     const laser = controller.getObjectByName("laser");
     if (laser) laser.material.color.setHex(0xff00ff);
@@ -171,6 +201,7 @@ export function checkResetRuneSelection(controller) {
 
 export function onSelectStart(event) {
     const controller = event.target;
+    controller.userData.isGrabbing = true; // Visual grab feedback start
     
     // Check if player triggered the Reset Rune in VR
     if (checkResetRuneSelection(controller)) {
@@ -188,6 +219,7 @@ export function onSelectStart(event) {
 
 export function onSelectEnd(event) {
     const controller = event.target;
+    controller.userData.isGrabbing = false; // Visual grab feedback end
     state.ingredients.forEach(item => {
         if (item.userData.grabbedBy === controller) {
             releaseObject(controller, item);
@@ -381,3 +413,98 @@ export function checkRecipe() {
 }
 
 // Legacy fadeOut removed, handled inside ingredients.js frame-rate independently
+
+// --- Procedural Witch Hand Model Generator ---
+function createHandMesh(handedness) {
+    const group = new THREE.Group();
+    group.name = "handModel";
+
+    // Witch-green semi-transparent glow material
+    const handMaterial = new THREE.MeshStandardMaterial({
+        color: 0x2bf060, // witch green
+        emissive: 0x092b12, // dark green emissive glow
+        roughness: 0.3,
+        metalness: 0.1,
+        transparent: true,
+        opacity: 0.85
+    });
+
+    // Palm
+    const palmGeo = new THREE.BoxGeometry(0.04, 0.012, 0.045);
+    const palm = new THREE.Mesh(palmGeo, handMaterial);
+    palm.position.set(0, -0.005, -0.0225);
+    group.add(palm);
+
+    // Fingers
+    const pivots = [];
+    // 4 fingers (index, middle, ring, pinky)
+    for (let i = 0; i < 4; i++) {
+        const pivot = new THREE.Group();
+        const xPos = -0.015 + i * 0.01;
+        pivot.position.set(xPos, -0.002, -0.045);
+        
+        // Vary finger lengths for realism
+        const fingerLength = (i === 1) ? 0.03 : (i === 2 ? 0.028 : (i === 0 ? 0.026 : 0.022));
+        const fingerGeo = new THREE.BoxGeometry(0.007, 0.007, fingerLength);
+        const fingerMesh = new THREE.Mesh(fingerGeo, handMaterial);
+        fingerMesh.position.set(0, 0, -fingerLength / 2);
+        
+        pivot.add(fingerMesh);
+        group.add(pivot);
+        pivots.push(pivot);
+    }
+
+    // Thumb
+    const thumbPivot = new THREE.Group();
+    const isLeft = (handedness === 'left');
+    thumbPivot.position.set(isLeft ? 0.022 : -0.022, -0.002, -0.015);
+    thumbPivot.rotation.y = isLeft ? -Math.PI / 4 : Math.PI / 4;
+    
+    const thumbGeo = new THREE.BoxGeometry(0.007, 0.007, 0.02);
+    const thumbMesh = new THREE.Mesh(thumbGeo, handMaterial);
+    thumbMesh.position.set(0, 0, -0.01);
+    
+    thumbPivot.add(thumbMesh);
+    group.add(thumbPivot);
+
+    // Position hand group slightly offset from controller tracking origin
+    group.position.set(0, -0.015, 0.01);
+
+    return {
+        mesh: group,
+        pivots: pivots,
+        thumbPivot: thumbPivot
+    };
+}
+
+// --- Smooth Hand Animation Update Loop ---
+export function updateVRHands(dt) {
+    state.controllers.forEach(controller => {
+        if (!controller.userData.handMesh || !controller.userData.handPivots) return;
+
+        const isGrabbing = !!controller.userData.isGrabbing;
+        const handedness = controller.userData.handedness;
+        const pivots = controller.userData.handPivots;
+        const thumbPivot = controller.userData.thumbPivot;
+
+        // Target rotations:
+        // Relaxed state has a tiny curl.
+        // Grabbed state curled in ~1.2 rad.
+        const targetFingerRotX = isGrabbing ? 1.2 : 0.1;
+        const targetThumbRotX = isGrabbing ? 0.8 : 0.1;
+        const targetThumbRotY = isGrabbing 
+            ? (handedness === 'left' ? 0.4 : -0.4) 
+            : (handedness === 'left' ? -Math.PI / 4 : Math.PI / 4);
+
+        // Smoothly lerp towards target rotations
+        pivots.forEach((pivot, idx) => {
+            const individualOffset = isGrabbing ? (idx * 0.05) : 0;
+            pivot.rotation.x = THREE.MathUtils.lerp(pivot.rotation.x, targetFingerRotX + individualOffset, 12 * dt);
+        });
+
+        if (thumbPivot) {
+            thumbPivot.rotation.x = THREE.MathUtils.lerp(thumbPivot.rotation.x, targetThumbRotX, 12 * dt);
+            thumbPivot.rotation.y = THREE.MathUtils.lerp(thumbPivot.rotation.y, targetThumbRotY, 12 * dt);
+        }
+    });
+}

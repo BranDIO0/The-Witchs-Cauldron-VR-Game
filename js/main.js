@@ -6,7 +6,7 @@ import { state } from './state.js';
 import { buildEnvironment } from './environment.js';
 import { spawnIngredients, updateIngredientParticles } from './ingredients.js';
 import { DiscoveryManager } from './discovery.js';
-import { initVRControllers, initGrabInteraction, checkCauldronCollision, drawTeleportArc, updateControllerVelocityTracker } from './vrControls.js';
+import { initVRControllers, initGrabInteraction, checkCauldronCollision, drawTeleportArc, updateControllerVelocityTracker, updateVRHands } from './vrControls.js';
 import { initDesktopInteractions, initSimulatorButtons } from './desktopControls.js';
 import { updatePhysics } from './physics.js';
 import { updateFireplaceParticles } from './cabin.js';
@@ -92,6 +92,8 @@ function animate(timestamp, frame) {
                 drawTeleportArc(controller);
             }
         });
+
+        updateVRHands(realDt);
     }
 
     // 2. Perform Custom Physics kinematics
